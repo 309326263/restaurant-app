@@ -1,0 +1,174 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "sqlite"
+  url      = "file:./dev.db"
+}
+
+enum OrderStatus {
+  OPEN
+  PAID
+  CANCELED
+}
+
+enum ItemStatus {
+  PENDING
+  SENT
+  DONE
+}
+
+enum ItemType {
+  PRODUCT
+  CUSTOM
+}
+
+enum Station {
+  KITCHEN
+  BAR
+}
+
+model Table {
+  id     Int    @id @default(autoincrement())
+  name   String
+  status String @default("FREE")
+
+  orders Order[]
+}
+
+model Order {
+  id      Int   @id @default(autoincrement())
+  tableId Int
+  table   Table @relation(fields: [tableId], references: [id])
+
+  status OrderStatus @default(OPEN)
+
+  items OrderItem[]
+
+  createdAt  DateTime  @default(now())
+  updatedAt  DateTime  @updatedAt
+  lastSentAt DateTime?
+
+  // 🔥 AGREGA ESTO
+  tickets KitchenTicket[]
+}
+
+model OrderItem {
+  
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
+
+  // =========================
+  // 🧾 ORIGEN DEL PRODUCTO
+  // =========================
+
+  productId Int?   // 👈 opcional (MENÚ)
+  product Product? @relation(fields: [productId], references: [id])
+
+
+  // =========================
+  // 📦 CANTIDAD / ESTADO
+  // =========================
+  quantity Int
+
+  status ItemStatus @default(PENDING)
+
+  station Station // 🔥 cocina o bar
+
+
+  // =========================
+  // 🍜 VARIANTES
+  // =========================
+  variantName  String? // pollo / res / camarón
+  variantPrice Float? // precio variante si aplica
+
+  
+
+   // =========================
+  // 🧩 PRODUCTO MANUAL (FUERA DE MENÚ)
+  // =========================
+  customName String?     // 👈 nombre escrito en el momento
+  customPrice Float?     // 👈 precio manual
+
+
+  // =========================
+  // 🔥 CONTROL KITCHEN
+  // =========================
+
+  // 🔥 NUEVO
+  ticketId Int?
+  ticket   KitchenTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
+
+  sentAt DateTime? // 🔥 NUEVO
+  notes  String?
+
+  type ItemType @default(PRODUCT)
+
+}
+
+
+model KitchenTicket {
+  id Int @id @default(autoincrement())
+
+  orderId Int
+  order   Order @relation(fields: [orderId], references: [id])
+
+  createdAt DateTime @default(now())
+
+  items OrderItem[]
+}
+
+model Category {
+  id   Int    @id @default(autoincrement())
+  name String
+  key  String @unique   // 👈 ESTO ES CLAVE
+
+  products Product[]
+}
+
+model Product {
+  id    Int    @id @default(autoincrement())
+  name  String
+  price Float
+
+  description String? // 🔥 AÑADIDO
+
+  categoryId Int
+  category   Category @relation(fields: [categoryId], references: [id])
+
+  station Station
+
+  isCombo Boolean @default(false)
+
+  variants   ProductVariant[]
+  // 🔥 AGREGAR ESTO
+  orderItems OrderItem[]
+}
+
+model ProductVariant {
+  id Int @id @default(autoincrement())
+
+  name  String
+  price Float
+
+  productId Int
+  product   Product @relation(fields: [productId], references: [id])
+}
+
+model ComboItem {
+  id Int @id @default(autoincrement())
+
+  comboId   Int
+  productId Int
+
+  quantity Int
+}
+
+model Extra {
+  id    Int    @id @default(autoincrement())
+  name  String
+  price Float
+}
