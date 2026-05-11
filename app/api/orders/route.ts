@@ -1,4 +1,4 @@
-import { prisma } from "@/lib/prisma";
+import { createOrder } from "@/server/services/order.service";
 
 
 
@@ -18,36 +18,7 @@ export async function POST(req: Request) {
       );
     }
 
-    const order = await prisma.order.create({
-      data: {
-        tableId,
-        status: "OPEN",
-        items: {
-          create: items.map((item: any) => ({
-            type: item.isCustom ? "CUSTOM" : "PRODUCT",
-            
-            productId:
-            item.productId && !isNaN(Number(item.productId))
-              ? Number(item.productId)
-              : null,
-
-            customName: item.customName ?? null,
-            customPrice: item.customPrice ?? null,
-
-            quantity: item.quantity ?? item.qty ?? 1,
-
-            variantName: item.variantName ?? null,
-            variantPrice: item.variantPrice ?? null,
-
-            station: item.station,
-
-            status: "PENDING",
-
-            notes: item.notes ?? null,
-          })),
-        },
-      },
-    });
+    const order = await createOrder({ tableId, items });
 
     return Response.json({ ok: true, order });
   } catch (error) {

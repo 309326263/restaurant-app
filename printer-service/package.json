@@ -1,0 +1,26 @@
+{
+  "name": "printer-service",
+  "version": "1.0.0",
+  "description": "Independent POS printer service for kitchen/bar tickets",
+  "main": "index.js",
+  "scripts": {
+    "dev": "node index.js",
+    "start": "node index.js"
+  },
+  "keywords": [
+    "escpos",
+    "printer",
+    "pos",
+    "restaurant"
+  ],
+  "author": "SatoSan",
+  "license": "ISC",
+  "type": "commonjs",
+  "dependencies": {
+    "cors": "^2.8.5",
+    "dotenv": "^17.2.3",
+    "escpos": "^3.0.0-alpha.6",
+    "escpos-usb": "^3.0.0-alpha.4",
+    "express": "^5.1.0"
+  }
+}

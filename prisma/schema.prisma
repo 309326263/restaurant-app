@@ -16,6 +16,7 @@ enum OrderStatus {
 enum ItemStatus {
   PENDING
   SENT
+  IN_PROGRESS
   DONE
 }
 

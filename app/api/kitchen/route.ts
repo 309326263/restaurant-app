@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import { getKitchenView } from "@/server/services/kitchenState.service";
 
 export async function GET() {
   const orders = await prisma.order.findMany({
@@ -7,15 +8,6 @@ export async function GET() {
     },
     include: {
       table: true,
-      items: {
-        where: {
-          status: "SENT",
-        },
-        include: {
-          product: true,
-          ticket: true, // 🔥 ESTO FALTABA
-        },
-      },
     },
     orderBy: [
       { lastSentAt: "asc" }, // 🔥 prioridad por envío
@@ -23,16 +15,26 @@ export async function GET() {
     ],
   });
 
-  const formatted = orders.map((order) => ({
-    ...order,
-    items: order.items.map((i) => ({
-      ...i,
-      ticketId: i.ticketId, // 🔥 asegurar que llega
-      displayName: i.variantName
-        ? `${i.product?.name || i.customName} - ${i.variantName}`
-        : i.product?.name || i.customName,
-    })),
-  }));
+  const formatted = await Promise.all(
+    orders.map(async (order) => {
+      const kitchenView = await getKitchenView(order.id);
+
+      const items = kitchenView
+        ? [
+            ...kitchenView.stations.KITCHEN.SENT,
+            ...kitchenView.stations.KITCHEN.IN_PROGRESS,
+            ...kitchenView.stations.BAR.SENT,
+            ...kitchenView.stations.BAR.IN_PROGRESS,
+          ]
+        : [];
+
+      return {
+        ...order,
+        items,
+        kitchenView,
+      };
+    })
+  );
 
   return Response.json(formatted);
 }

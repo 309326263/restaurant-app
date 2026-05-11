@@ -3,6 +3,7 @@
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useEffect, useRef, useState } from "react";
+import { useKitchenEvents } from "@/app/hooks/useKitchenEvents";
 import "./kitchen.css";
 import { useRouter } from "next/navigation";
 import { History } from "lucide-react";
@@ -92,8 +93,43 @@ export default function Kitchen() {
     await fetch(`/api/orders/${orderId}/ready`, {
       method: "POST",
     });
+  };
 
-    mutate();
+  const updateKitchenItem = async (
+    itemId: number,
+    action: "start" | "complete" | "revert"
+  ) => {
+    await fetch(`/api/kitchen/items/${itemId}`, {
+      method: "PATCH",
+      headers: {
+        "Content-Type": "application/json",
+      },
+      body: JSON.stringify({ action }),
+    });
+  };
+
+  useKitchenEvents({
+    onItemUpdated: () => mutate(),
+    onOrderUpdated: () => mutate(),
+  });
+
+  const getKitchenVisibleItems = (order: any) => {
+    const kitchenState = order.kitchenView?.stations?.KITCHEN;
+
+    if (kitchenState) {
+      return [
+        ...(kitchenState.SENT ?? []),
+        ...(kitchenState.IN_PROGRESS ?? []),
+      ];
+    }
+
+    // Fallback para compatibilidad con payload previo.
+    return order.items.filter(
+      (i: any) =>
+        (i.status === "SENT" ||
+          i.status === "IN_PROGRESS") &&
+        i.station === "KITCHEN"
+    );
   };
 
   // SIDEBAR
@@ -163,11 +199,7 @@ export default function Kitchen() {
 
     orders.forEach((order: any) => {
       const count =
-        order.items?.filter(
-          (i: any) =>
-            i.status === "SENT" &&
-            i.station === "KITCHEN"
-        ).length || 0;
+        getKitchenVisibleItems(order).length || 0;
 
       const prev = prevRef.current[order.id] || 0;
 
@@ -227,11 +259,7 @@ export default function Kitchen() {
   
   const sortedOrders = [...orders]
       .map((order: any) => {
-        const visible = order.items.filter(
-          (i: any) =>
-            i.status === "SENT" &&
-            i.station === "KITCHEN"
-        );
+        const visible = getKitchenVisibleItems(order);
 
         const minCategory =
         visible.length
@@ -401,11 +429,7 @@ export default function Kitchen() {
               <div className="kitchen-overlay-list">
                 {sortedOrders.map((order: any) => {
                   const visibleItems =
-                    order.items.filter(
-                      (i: any) =>
-                        i.status === "SENT" &&
-                        i.station === "KITCHEN"
-                    );
+                    getKitchenVisibleItems(order);
 
                   if (!visibleItems.length)
                     return null;
@@ -439,11 +463,7 @@ export default function Kitchen() {
             {/* CARDS */}
             {sortedOrders.map((order: any) => {
               const visible =
-                order.items.filter(
-                  (i: any) =>
-                    i.status === "SENT" &&
-                    i.station === "KITCHEN"
-                );
+                getKitchenVisibleItems(order);
 
               if (!visible.length) return null;
 
@@ -462,16 +482,16 @@ export default function Kitchen() {
                     focusedOrder === order.id ? "focus-card" : ""
                   }`}
                   data-cat={
-                    order.items?.[0]?.product?.categoryId
+                    visible?.[0]?.product?.categoryId
                   }
                 >
                   <div
                     className={`category-line ${
-                      order.items?.[0]?.product?.categoryId === 1
+                      visible?.[0]?.product?.categoryId === 1
                         ? "line-orange"
-                        : order.items?.[0]?.product?.categoryId === 8
+                        : visible?.[0]?.product?.categoryId === 8
                         ? "line-green"
-                        : order.items?.[0]?.product?.categoryId === 5
+                        : visible?.[0]?.product?.categoryId === 5
                         ? "line-purple-top"
                         : ""
                     }`}
@@ -517,11 +537,58 @@ export default function Kitchen() {
                                   key={item.id}
                                   className="kitchen-item"
                                 >
-                                  {item.variantName
-                                    ? `${item.product?.name || item.customName} - ${item.variantName}`
-                                    : item.product
-                                        .name}{" "}
-                                  x {item.quantity}
+                                  <div>
+                                    {item.variantName
+                                      ? `${item.product?.name || item.customName} - ${item.variantName}`
+                                      : item.product
+                                          ?.name || item.customName}{" "}
+                                    x {item.quantity}
+                                  </div>
+                                  <div
+                                    style={{
+                                      display: "flex",
+                                      gap: "8px",
+                                      marginTop: "4px",
+                                    }}
+                                  >
+                                    {item.status === "SENT" && (
+                                      <button
+                                        onClick={() =>
+                                          updateKitchenItem(
+                                            item.id,
+                                            "start"
+                                          )
+                                        }
+                                      >
+                                        Empezar
+                                      </button>
+                                    )}
+                                    {item.status ===
+                                      "IN_PROGRESS" && (
+                                      <>
+                                        <button
+                                          onClick={() =>
+                                            updateKitchenItem(
+                                              item.id,
+                                              "complete"
+                                            )
+                                          }
+                                        >
+                                          Terminar
+                                        </button>
+                                        <button
+                                          onClick={() =>
+                                            updateKitchenItem(
+                                              item.id,
+                                              "revert"
+                                            )
+                                          }
+                                        >
+                                          Revertir
+                                        </button>
+                                      </>
+                                    )}
+                                  </div>
                                 </div>
                               )
                             )}

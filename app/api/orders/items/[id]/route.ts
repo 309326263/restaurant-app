@@ -1,4 +1,7 @@
-import { prisma } from "@/lib/prisma";
+import {
+  removeOrderItem,
+  updateOrderItem,
+} from "@/server/services/orderItem.service";
 
 export async function PATCH(
   req: Request,
@@ -14,25 +17,15 @@ export async function PATCH(
   const { quantity } = body;
 
   if (quantity <= 0) {
-
-    await prisma.orderItem.delete({
-      where: {
-        id: itemId,
-      },
-    });
+    await removeOrderItem(itemId);
 
     return Response.json({
       ok: true,
     });
   }
 
-  await prisma.orderItem.update({
-    where: {
-      id: itemId,
-    },
-    data: {
-      quantity,
-    },
+  await updateOrderItem(itemId, {
+    quantity,
   });
 
   return Response.json({

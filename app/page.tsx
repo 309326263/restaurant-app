@@ -16,6 +16,7 @@ import {
 
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
+import { useKitchenEvents } from "@/app/hooks/useKitchenEvents";
 
 import "./home.css";
 
@@ -122,30 +123,8 @@ const iconMap = Object.fromEntries(
   const sendToKitchen = async () => {
     if (!activeOrder?.id) return;
 
-    const items = activeOrder.items;
-
-    const splitByStation = (items: any[]) => {
-      const map: Record<string, any> = {};
-
-      items.forEach((item) => {
-        const station =
-          item.product.station || "kitchen";
-
-        if (!map[station]) {
-          map[station] = [];
-        }
-
-        map[station].push(item);
-      });
-
-      return map;
-    };
-
-    const grouped = splitByStation(items);
-
     const payload = {
       orderId: activeOrder.id,
-      stations: grouped,
       printKitchen,
       printBar,
     };
@@ -162,9 +141,7 @@ const iconMap = Object.fromEntries(
       }
     );
 
-    if (res.ok) {
-      mutateOrder();
-    }
+    if (!res.ok) return;
   };
 
   const [selectedTable, setSelectedTable] =
@@ -189,6 +166,19 @@ const iconMap = Object.fromEntries(
       : null,
     fetcher
   );
+
+  useKitchenEvents({
+    onItemUpdated: ({ orderId }) => {
+      if (activeOrder?.id === orderId) {
+        mutateOrder();
+      }
+    },
+    onOrderUpdated: ({ orderId }) => {
+      if (activeOrder?.id === orderId) {
+        mutateOrder();
+      }
+    },
+  });
 
   // 🔥 CATEGORIES
   const { data: categories = [] } = useSWR(
