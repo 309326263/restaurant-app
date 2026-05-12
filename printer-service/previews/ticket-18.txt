@@ -1,0 +1,20 @@
+==================
+   SATO SAN
+==================
+
+Mesa: Mesa 6
+Ticket: #18
+
+------------------
+x1 Coca Cola
+x1 Agua
+x1 Edamame
+x1 Calpis
+x1 Coca Cola
+x1 Agua
+x1 Calpis
+x1 asdas
+------------------
+
+==================
+
