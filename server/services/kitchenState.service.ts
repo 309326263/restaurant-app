@@ -1,4 +1,5 @@
 import { prisma } from "@/lib/prisma";
+import type { KitchenItem } from "@/app/types/kitchen";
 
 type KitchenStatus = "PENDING" | "SENT" | "IN_PROGRESS" | "DONE";
 type KitchenStation = "KITCHEN" | "BAR";
@@ -17,7 +18,7 @@ function createEmptyState() {
       IN_PROGRESS: [],
       DONE: [],
     },
-  } as Record<KitchenStation, Record<KitchenStatus, any[]>>;
+  } as Record<KitchenStation, Record<KitchenStatus, KitchenItem[]>>;
 }
 
 export async function getKitchenView(orderId: number) {
@@ -26,8 +27,17 @@ export async function getKitchenView(orderId: number) {
     include: {
       items: {
         include: {
-          product: true,
           ticket: true,
+          product: {
+            select: {
+              categoryId: true,
+              category: {
+                select: {
+                  name: true,
+                },
+              },
+            },
+          },
         },
       },
     },
@@ -48,11 +58,24 @@ export async function getKitchenView(orderId: number) {
     }
 
     state[station][status].push({
-      ...item,
+      id: item.id,
+      orderId: item.orderId,
+      productId: item.productId,
+      quantity: item.quantity,
+      unitPrice: item.unitPrice,
+      status: item.status,
+      station: item.station,
+      variantName: item.variantName,
+      variantPrice: item.variantPrice,
       ticketId: item.ticketId,
-      displayName: item.variantName
-        ? `${item.product?.name || item.customName} - ${item.variantName}`
-        : item.product?.name || item.customName,
+      sentAt: item.sentAt
+        ? item.sentAt.toISOString()
+        : null,
+      notes: item.notes,
+      type: item.type,
+      displayName: item.displayName || "Item",
+      categoryId: item.product?.categoryId ?? null,
+      categoryName: item.product?.category?.name ?? null,
     });
   }
 

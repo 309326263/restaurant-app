@@ -500,8 +500,6 @@ export function MenuPanel({
 
                                 addToPending({
                                   ...prod,
-                                  displayName:
-                                    prod.name,
                                   variant: null,
                                   variantPrice: 0,
                                 });
@@ -607,16 +605,11 @@ export function MenuPanel({
                                           }
                                           onClick={() => {
 
-                                            addToPending(
-                                              {
-                                                ...prod,
-                                                displayName: `${prod.name} - ${v.name}`,
-                                                variant:
-                                                  v.name,
-                                                variantPrice:
-                                                  v.price,
-                                              }
-                                            );
+                                            addToPending({
+                                              ...prod,
+                                              variant: v.name,
+                                              variantPrice: v.price,
+                                            });
 
                                             setSelectedVariant(
                                               null

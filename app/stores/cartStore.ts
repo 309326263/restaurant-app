@@ -4,9 +4,13 @@ import { create } from "zustand";
 
 type PendingItem = {
   id: string | number;
-  variant?: string | null;
-  qty: number;
+  quantity: number;
+  unitPrice: number;
+  displayName: string;
   note?: string;
+  station?: "KITCHEN" | "BAR";
+  isCustom?: boolean;
+  variantName?: string | null;
   [key: string]: any;
 };
 
@@ -21,18 +25,30 @@ type CartStore = {
   setPendingCart: (items: PendingItem[]) => void;
   clearPending: () => void;
   addToPending: (product: any) => void;
-  increasePending: (id: string | number, variant?: string) => void;
-  decreasePending: (id: string | number, variant?: string) => void;
-  removePending: (id: string | number, variant?: string) => void;
+  increasePending: (
+    id: string | number,
+    displayName?: string
+  ) => void;
+  decreasePending: (
+    id: string | number,
+    displayName?: string
+  ) => void;
+  removePending: (
+    id: string | number,
+    displayName?: string
+  ) => void;
   updatePendingNote: (
     id: string | number,
-    variant: string | undefined,
+    displayName: string | undefined,
     note: string
   ) => void;
   addCustomItem: (customItem: CustomItemInput) => void;
 };
 
 const normalizeId = (id: string | number) => String(id);
+
+const pendingLineKey = (p: PendingItem) =>
+  `${normalizeId(p.id)}::${(p.displayName || "").trim()}`;
 
 export const useCartStore = create<CartStore>((set) => ({
   pendingCart: [],
@@ -41,18 +57,27 @@ export const useCartStore = create<CartStore>((set) => ({
   addToPending: (product) =>
     set((state) => {
       const targetId = normalizeId(product.id);
+      const displayName = product.variant
+        ? `${product.name} ${product.variant}`
+        : product.name;
+
+      const unitPrice =
+        Number(product.variantPrice) ||
+        Number(product.price) ||
+        0;
+
       const existing = state.pendingCart.find(
-        (p) =>
-          normalizeId(p.id) === targetId &&
-          (p.variant || null) === (product.variant || null)
+        (p) => pendingLineKey(p as PendingItem) === `${targetId}::${displayName.trim()}`
       );
 
       if (existing) {
         return {
           pendingCart: state.pendingCart.map((p) =>
-            normalizeId(p.id) === targetId &&
-            (p.variant || null) === (product.variant || null)
-              ? { ...p, qty: Number(p.qty || 0) + 1 }
+            pendingLineKey(p as PendingItem) === `${targetId}::${displayName.trim()}`
+              ? {
+                  ...p,
+                  quantity: Number((p as PendingItem).quantity || 0) + 1,
+                }
               : p
           ),
         };
@@ -63,50 +88,60 @@ export const useCartStore = create<CartStore>((set) => ({
           ...state.pendingCart,
           {
             ...product,
-            qty: 1,
+            quantity: 1,
+            unitPrice,
+            displayName,
+            variantName: product.variant ?? null,
             note: product.note || "",
-            displayName: product.variant
-              ? `${product.name} - ${product.variant}`
-              : product.name,
           },
         ],
       };
     }),
-  increasePending: (id, variant) =>
+  increasePending: (id, displayName) =>
     set((state) => ({
       pendingCart: state.pendingCart.map((p) =>
-        normalizeId(p.id) === normalizeId(id) &&
-        (p.variant || null) === (variant || null)
-          ? { ...p, qty: Number(p.qty || 0) + 1 }
+        pendingLineKey(p as PendingItem) ===
+        `${normalizeId(id)}::${(displayName || "").trim()}`
+          ? {
+              ...p,
+              quantity:
+                Number((p as PendingItem).quantity || 0) + 1,
+            }
           : p
       ),
     })),
-  decreasePending: (id, variant) =>
+  decreasePending: (id, displayName) =>
     set((state) => ({
       pendingCart: state.pendingCart
         .map((p) =>
-          normalizeId(p.id) === normalizeId(id) &&
-          (p.variant || null) === (variant || null)
-            ? { ...p, qty: Number(p.qty || 0) - 1 }
+          pendingLineKey(p as PendingItem) ===
+          `${normalizeId(id)}::${(displayName || "").trim()}`
+            ? {
+                ...p,
+                quantity:
+                  Number((p as PendingItem).quantity || 0) - 1,
+              }
             : p
         )
-        .filter((p) => Number(p.qty || 0) > 0),
+        .filter(
+          (p) => Number((p as PendingItem).quantity || 0) > 0
+        ),
     })),
-  removePending: (id, variant) =>
+  removePending: (id, displayName) =>
     set((state) => ({
       pendingCart: state.pendingCart.filter(
         (p) =>
           !(
-            normalizeId(p.id) === normalizeId(id) &&
-            (p.variant || null) === (variant || null)
+            pendingLineKey(p as PendingItem) ===
+            `${normalizeId(id)}::${(displayName || "").trim()}`
           )
       ),
     })),
-  updatePendingNote: (id, variant, note) =>
+  updatePendingNote: (id, displayName, note) =>
     set((state) => ({
       pendingCart: state.pendingCart.map((p) =>
-        normalizeId(p.id) === normalizeId(id) &&
-        (p.variant || null) === (variant || null)
+        pendingLineKey(p as PendingItem) ===
+        `${normalizeId(id)}::${(displayName || "").trim()}`
           ? { ...p, note }
           : p
       ),
@@ -117,11 +152,11 @@ export const useCartStore = create<CartStore>((set) => ({
         ...state.pendingCart,
         {
           id: `custom-${Date.now()}`,
-          customName: customItem.name,
-          customPrice: Number(customItem.price || 0),
-          qty: 1,
-          station: customItem.station,
           isCustom: true,
+          displayName: customItem.name,
+          unitPrice: Number(customItem.price || 0),
+          quantity: 1,
+          station: customItem.station,
           note: "",
         },
       ],

@@ -15,14 +15,16 @@ export async function POST(
     return Response.json({ ok: false }, { status: 400 });
   }
 
-  const order = await createKitchenTickets(orderId);
+  const result = await createKitchenTickets(orderId);
 
-  if (!order) {
+  if (!result) {
     return Response.json({ ok: false }, { status: 404 });
   }
 
+  const { order, printedItems } = result;
+
   // =========================
-  // 🟢 IMPRESIÓN (SIN CAMBIOS)
+  // 🟢 IMPRESIÓN (solo ítems del envío actual)
   // =========================
   if (kitchen || bar) {
     let event = "";
@@ -43,7 +45,7 @@ export async function POST(
         payload: {
           id: order.id,
           table: order.table,
-          items: order.items,
+          items: printedItems,
         },
       }),
     });

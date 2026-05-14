@@ -20,6 +20,8 @@ import { useOrderStore } from "@/app/stores/orderStore";
 import { useKitchenSync } from "@/app/hooks/useKitchenSync";
 import { useOrderTotals } from "@/app/hooks/useOrderTotals";
 
+import { getItemName, getItemPrice, getItemQty } from "@/lib/orderItem";
+
 import { LeftSidebarShell } from "@/app/components/layout/LeftSidebarShell";
 
 export default function Home() {
@@ -159,48 +161,44 @@ export default function Home() {
     if (!ok || !activeOrder?.id) return;
 
     const res = await fetch(`/api/orders/${activeOrder.id}`);
+    if (!res.ok) return;
+
     const order = await res.json();
 
     const items = order.items || [];
 
     const receiptItems = items
-  .filter((i: any) => i.quantity > 0)
-  .map((i: any) => {
-    const name =
-      i.product?.name ||
-      i.customName ||
-      i.name ||
-      "ITEM";
-
-    const qty = Number(i.quantity || 0);
-
-    const price = Number(
-      i.price ??
-      i.product?.price ??
-      i.unitPrice ??
-      0
-    );
-
-    return {
-      name,
-      qty,
-      price,
-    };
-  });
+      .filter((i: any) => getItemQty(i) > 0)
+      .map((i: any) => ({
+        id: i.id,
+        displayName: getItemName(i),
+        quantity: getItemQty(i) || 1,
+        unitPrice: getItemPrice(i),
+        station: i.station,
+        variantName: i.variantName ?? null,
+        notes: i.notes ?? null,
+        type: i.type,
+        productId: i.productId ?? null,
+      }));
 
     const total = receiptItems.reduce(
-      (sum: number, i: any) => sum + i.qty * i.price,
+      (sum: number, i: any) =>
+        sum + i.quantity * i.unitPrice,
       0
     );
 
-    await fetch("http://localhost:4010/print/checkout", {
+    await fetch("http://localhost:4000/emit", {
       method: "POST",
       headers: { "Content-Type": "application/json" },
       body: JSON.stringify({
-        table: order.table?.name,
-        items: receiptItems,
-        total,
-        ticketId: order.id,
+        events: ["PRINT_RECEIPT"],
+        payload: {
+          id: order.id,
+          table: order.table,
+          items: receiptItems,
+          total,
+          ticketId: order.id,
+        },
       }),
     });
 

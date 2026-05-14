@@ -9,9 +9,7 @@ export async function createKitchenTickets(orderId: number) {
     where: { id: orderId },
     include: {
       table: true,
-      items: {
-        include: { product: true },
-      },
+      items: true,
     },
   });
 
@@ -34,6 +32,9 @@ export async function createKitchenTickets(orderId: number) {
     acc[station].push(item);
     return acc;
   }, {});
+
+  /** Solo estos ítems deben ir a impresión (cocina / bar). */
+  const printedItems: typeof order.items = [];
 
   for (const stationItems of Object.values(itemsByStation)) {
     if (!stationItems.length) {
@@ -60,6 +61,12 @@ export async function createKitchenTickets(orderId: number) {
     });
 
     for (const item of stationItems) {
+      printedItems.push({
+        ...item,
+        status: "SENT",
+        sentAt: now,
+        ticketId: ticket.id,
+      });
       emitItemUpdated(orderId, item.id);
     }
   }
@@ -73,5 +80,16 @@ export async function createKitchenTickets(orderId: number) {
 
   emitOrderUpdated(orderId);
 
-  return order;
+  const freshOrder = await prisma.order.findUnique({
+    where: { id: orderId },
+    include: {
+      table: true,
+      items: true,
+    },
+  });
+
+  return {
+    order: freshOrder ?? order,
+    printedItems,
+  };
 }

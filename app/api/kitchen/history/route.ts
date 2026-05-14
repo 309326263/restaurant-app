@@ -12,11 +12,7 @@ export async function GET() {
     },
     include: {
       table: true,
-      items: {
-        include: {
-          product: true,
-        },
-      },
+      items: true,
     },
     orderBy: {
       createdAt: "desc",

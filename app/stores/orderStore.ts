@@ -34,13 +34,31 @@ type OrderStore = {
 
 function mapPendingToApi(items: any[]) {
   return items.map((p) => ({
-    productId: p.isCustom ? null : p.id,
-    customName: p.customName ?? null,
-    customPrice: p.customPrice ?? null,
-    quantity: Number(p.qty ?? p.quantity ?? 1),
-    variantName: p.variant || null,
-    variantPrice: Number(p.variantPrice || 0),
+    productId: p.isCustom
+      ? null
+      : Number(p.id),
+
+    quantity: Number(
+      p.quantity || 1
+    ),
+
+    unitPrice: Number(
+      p.unitPrice || 0
+    ),
+
+    displayName:
+      p.displayName || "Item",
+
     station: p.station,
+
+    variantName:
+      p.variantName || p.variant || null,
+
+    notes: p.note || null,
+
+    type: p.isCustom
+      ? "CUSTOM"
+      : "PRODUCT",
   }));
 }
 

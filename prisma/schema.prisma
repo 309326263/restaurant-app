@@ -56,58 +56,35 @@ model Order {
 }
 
 model OrderItem {
-  
   id Int @id @default(autoincrement())
 
   orderId Int
   order   Order @relation(fields: [orderId], references: [id], onDelete: Cascade)
 
-  // =========================
-  // 🧾 ORIGEN DEL PRODUCTO
-  // =========================
+  productId Int?
+  product   Product? @relation(fields: [productId], references: [id])
 
-  productId Int?   // 👈 opcional (MENÚ)
-  product Product? @relation(fields: [productId], references: [id])
-
-
-  // =========================
-  // 📦 CANTIDAD / ESTADO
-  // =========================
   quantity Int
 
-  status ItemStatus @default(PENDING)
+  unitPrice   Float
+  displayName String
+  status      ItemStatus @default(PENDING)
 
-  station Station // 🔥 cocina o bar
+  station Station
 
+  variantName  String?
+  variantPrice Float?
 
-  // =========================
-  // 🍜 VARIANTES
-  // =========================
-  variantName  String? // pollo / res / camarón
-  variantPrice Float? // precio variante si aplica
+  customName  String?
+  customPrice Float?
 
-  
-
-   // =========================
-  // 🧩 PRODUCTO MANUAL (FUERA DE MENÚ)
-  // =========================
-  customName String?     // 👈 nombre escrito en el momento
-  customPrice Float?     // 👈 precio manual
-
-
-  // =========================
-  // 🔥 CONTROL KITCHEN
-  // =========================
-
-  // 🔥 NUEVO
   ticketId Int?
   ticket   KitchenTicket? @relation(fields: [ticketId], references: [id], onDelete: Cascade)
 
-  sentAt DateTime? // 🔥 NUEVO
+  sentAt DateTime?
   notes  String?
 
   type ItemType @default(PRODUCT)
-
 }
 
 

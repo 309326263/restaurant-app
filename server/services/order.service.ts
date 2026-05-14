@@ -5,26 +5,34 @@ type CreateOrderInput = {
   items: any[];
 };
 
-export async function createOrder({ tableId, items }: CreateOrderInput) {
+export async function createOrder({
+  tableId,
+  items,
+}: CreateOrderInput) {
   return prisma.order.create({
     data: {
       tableId,
       status: "OPEN",
       items: {
         create: items.map((item: any) => ({
-          type: item.isCustom ? "CUSTOM" : "PRODUCT",
+          type:
+            item.type === "CUSTOM"
+              ? "CUSTOM"
+              : "PRODUCT",
           productId:
-            item.productId && !isNaN(Number(item.productId))
+            item.productId &&
+            !isNaN(Number(item.productId))
               ? Number(item.productId)
               : null,
-          customName: item.customName ?? null,
-          customPrice: item.customPrice ?? null,
-          quantity: item.quantity ?? item.qty ?? 1,
+          quantity: Number(item.quantity ?? 1),
+          unitPrice: Number(item.unitPrice ?? 0),
+          displayName:
+            String(item.displayName || "Item").trim() ||
+            "Item",
           variantName: item.variantName ?? null,
-          variantPrice: item.variantPrice ?? null,
           station: item.station,
           status: "PENDING",
-          notes: item.notes ?? null,
+          notes: item.notes ?? item.note ?? null,
         })),
       },
     },

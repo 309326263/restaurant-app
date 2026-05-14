@@ -2,14 +2,14 @@ import { motion } from "framer-motion";
 import { PosButton } from "./PosButton";
 
 export function OrderItem({
-  name,
-  qty,
-  price,
+  displayName,
+  quantity,
+  unitPrice,
   onRemove,
 }: {
-  name: string;
-  qty: number;
-  price: number;
+  displayName: string;
+  quantity: number;
+  unitPrice: number;
   onRemove?: () => void;
 }) {
   return (
@@ -20,9 +20,9 @@ export function OrderItem({
       className="flex justify-between items-center p-2 rounded bg-[var(--bg-panel)]"
     >
       <div>
-        <div className="font-medium">{name}</div>
+        <div className="font-medium">{displayName}</div>
         <div className="text-xs opacity-60">
-          {qty} x ${price}
+          {quantity} x ${unitPrice}
         </div>
       </div>
 

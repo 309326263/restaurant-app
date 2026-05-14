@@ -3,7 +3,7 @@ import cors from "cors";
 import http from "http";
 import { Server } from "socket.io";
 import { addJob } from "./queue";
-import { PrintJob, Station, TicketItem } from "./types";
+import { PrintJob, SnapshotPrintItem, Station } from "./types";
 
 const app = express();
 app.use(cors());
@@ -30,13 +30,23 @@ io.on("connection", (socket) => {
   socket.on("PRINT_KITCHEN_AND_BAR", (payload) => {
     enqueueFromEvent("PRINT_KITCHEN_AND_BAR", payload);
   });
+
+  socket.on("PRINT_RECEIPT", (payload) => {
+    enqueueFromEvent("PRINT_RECEIPT", payload);
+  });
 });
 
-function toTicketItem(raw: any): TicketItem {
+function normalizeItem(raw: any): SnapshotPrintItem {
   return {
-    name: String(raw?.name || raw?.product?.name || raw?.customName || "Item"),
-    qty: Number(raw?.qty || raw?.quantity || 1),
-    notes: raw?.notes ? String(raw.notes) : null,
+    id: raw?.id,
+    displayName: String(raw?.displayName || "Item").trim() || "Item",
+    quantity: Number(raw?.quantity || 0),
+    unitPrice: Number(raw?.unitPrice || 0),
+    station: raw?.station,
+    variantName: raw?.variantName ?? null,
+    notes: raw?.notes ?? null,
+    type: raw?.type,
+    productId: raw?.productId ?? null,
   };
 }
 
@@ -53,7 +63,13 @@ function buildPayload(station: Station, raw: any): PrintJob["payload"] {
     station,
     table,
     ticketId: String(ticketId),
-    items: itemsRaw.map(toTicketItem),
+    items: itemsRaw
+      .map(normalizeItem)
+      .filter((item: SnapshotPrintItem) => item.quantity > 0),
+    total:
+      raw?.total === undefined
+        ? undefined
+        : Number(raw.total || 0),
   };
 }
 
@@ -83,6 +99,14 @@ function enqueueFromEvent(event: string, payload: any) {
       addJob({
         type: "PRINT_BAR",
         payload: buildPayload("BAR", payload),
+      });
+      return;
+    }
+
+    if (event === "PRINT_RECEIPT") {
+      addJob({
+        type: "PRINT_RECEIPT",
+        payload: buildPayload("KITCHEN", payload),
       });
     }
   } catch (error) {

@@ -5,6 +5,29 @@ import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
 import { useRouter } from "next/navigation";
 import { ArrowLeft, ClipboardList } from "lucide-react";
+import type {
+  KitchenItem,
+  KitchenOrder,
+  KitchenTable,
+} from "@/app/types/kitchen";
+
+function getOrderTime(order: KitchenOrder) {
+  const timestamp = new Date(order.createdAt).getTime();
+
+  return Number.isFinite(timestamp)
+    ? timestamp
+    : Number(order.id);
+}
+
+function formatOrderDate(value: string) {
+  const date = new Date(value);
+
+  if (!Number.isFinite(date.getTime())) {
+    return "";
+  }
+
+  return `${date.toLocaleDateString()} ${date.toLocaleTimeString()}`;
+}
 
 export default function History() {
   const router = useRouter();
@@ -14,12 +37,12 @@ export default function History() {
     useState<number | null>(null);
 
   // 🔥 data
-  const { data: orders = [] } = useSWR(
+  const { data: orders = [] } = useSWR<KitchenOrder[]>(
     "/api/kitchen/history",
     fetcher
   );
 
-  const { data: tables = [] } = useSWR(
+  const { data: tables = [] } = useSWR<KitchenTable[]>(
     "/api/tables",
     fetcher
   );
@@ -28,13 +51,12 @@ export default function History() {
   const filteredOrders = (
     selectedTable
       ? orders.filter(
-          (o: any) => o.tableId === selectedTable
+          (o: KitchenOrder) => o.tableId === selectedTable
         )
       : orders
   ).sort(
-    (a: any, b: any) =>
-      new Date(b.createdAt).getTime() -
-      new Date(a.createdAt).getTime()
+    (a: KitchenOrder, b: KitchenOrder) =>
+      getOrderTime(b) - getOrderTime(a)
   );
 
   return (
@@ -84,7 +106,7 @@ export default function History() {
           </button>
 
           {/* MESAS */}
-          {tables.map((t: any) => (
+          {tables.map((t: KitchenTable) => (
             <button
               key={t.id}
               onClick={() => setSelectedTable(t.id)}
@@ -110,7 +132,7 @@ export default function History() {
             </div>
           )}
 
-          {filteredOrders.map((order: any) => (
+          {filteredOrders.map((order: KitchenOrder) => (
             <div
               key={order.id}
               className="border border-zinc-200 rounded-2xl p-4 shadow-sm bg-white"
@@ -123,34 +145,42 @@ export default function History() {
                   </span>
 
                   <span className="text-xs text-zinc-400">
-                    {new Date(
-                      order.createdAt
-                    ).toLocaleDateString()}{" "}
-                    {new Date(
-                      order.createdAt
-                    ).toLocaleTimeString()}
+                    {formatOrderDate(order.createdAt)}
                   </span>
                 </div>
               </div>
 
               {/* ITEMS */}
               <div className="flex flex-col gap-2">
-                {order.items.map((i: any) => (
+                {(order.items ?? []).map((i: KitchenItem) => (
                   <div
                     key={i.id}
                     className="flex justify-between items-center gap-4 text-sm border-b border-zinc-100 pb-2"
                   >
-                    {/* 🔥 NOMBRE COMPLETO */}
-                    <span className="font-medium text-zinc-800">
-                      {i.variantName
-                        ? `${i.product?.name || i.customName} - ${i.variantName}`
-                        : i.product?.name || i.customName}{" "}
-                      x {i.quantity}
-                    </span>
+                    {/* 🔥 ITEM */}
+                    <div className="flex flex-col flex-1 min-w-0">
+
+                      {/* 🔥 NOMBRE + CANTIDAD + NOTA */}
+                      <span className="font-medium text-zinc-800 break-words">
+                        <span className="font-bold mr-2">
+                          {i.quantity}
+                        </span>
+
+                        <span>
+                          {i.displayName}
+                        </span>
+
+                        {i.notes?.trim() ? (
+                          <span className="text-zinc-500 font-normal">
+                            {" "}— {i.notes}
+                          </span>
+                        ) : null}
+                      </span>
+                    </div>
 
                     {/* STATUS */}
                     <span
-                      className={`text-xs px-2 py-1 rounded-full font-semibold ${
+                      className={`text-xs px-2 py-1 rounded-full font-semibold shrink-0 ${
                         i.status === "DONE"
                           ? "bg-green-100 text-green-700"
                           : i.status === "SENT"

@@ -1,36 +1,77 @@
 "use client";
 
 import { useMemo } from "react";
+import {
+  getItemName,
+  getItemPrice,
+  getItemQty,
+  getItemStation,
+} from "@/lib/orderItem";
 
-export function useOrderTotals(activeOrder: any, pendingCart: any[]) {
+export function useOrderTotals(
+  activeOrder: any,
+  pendingCart: any[]
+) {
+  const normalizeItem = (i: any) => {
+    return {
+      ...i,
+
+      quantity: getItemQty(i),
+
+      unitPrice: getItemPrice(i),
+
+      displayName: getItemName(i),
+
+      station: getItemStation(i),
+    };
+  };
+
   const groupedItems = useMemo(() => {
-    const source = Array.isArray(activeOrder?.items) ? activeOrder.items : [];
-    return source.reduce((acc: Record<string, any>, item: any) => {
-      const key = `${item.product?.name || item.customName}-${item.variantName || ""}`;
-      if (!acc[key]) {
-        acc[key] = { ...item, totalQty: 0 };
-      }
-      acc[key].totalQty += Number(item.quantity || 0);
-      return acc;
-    }, {});
+    const source = Array.isArray(activeOrder?.items)
+      ? activeOrder.items
+      : [];
+
+    const allItems = [...source];
+
+    return allItems.reduce(
+      (acc: Record<string, any>, item: any) => {
+        const ni = normalizeItem(item);
+
+        const key = `${ni.displayName}::${ni.unitPrice}::${ni.station}`;
+
+        if (!acc[key]) {
+          acc[key] = {
+            ...ni,
+            quantity: 0,
+          };
+        }
+
+        acc[key].quantity += ni.quantity;
+
+        return acc;
+      },
+      {}
+    );
   }, [activeOrder]);
 
   const total = useMemo(() => {
-    const activeTotal = (Array.isArray(activeOrder?.items) ? activeOrder.items : []).reduce(
-      (sum: number, i: any) =>
-        sum +
-        (Number(i.customPrice ?? i.product?.price ?? 0) + Number(i.variantPrice || 0)) *
-          Number(i.quantity || 0),
-      0
-    );
+    const activeTotal = (
+      Array.isArray(activeOrder?.items)
+        ? activeOrder.items
+        : []
+    ).reduce((sum: number, i: any) => {
+      const ni = normalizeItem(i);
+      return sum + ni.unitPrice * ni.quantity;
+    }, 0);
 
-    const pendingTotal = (Array.isArray(pendingCart) ? pendingCart : []).reduce(
-      (sum: number, p: any) =>
+    const pendingTotal = (
+      Array.isArray(pendingCart) ? pendingCart : []
+    ).reduce((sum: number, p: any) => {
+      return (
         sum +
-        (Number(p.customPrice ?? p.price ?? 0) + Number(p.variantPrice || 0)) *
-          Number(p.qty || 0),
-      0
-    );
+        getItemPrice(p) * getItemQty(p)
+      );
+    }, 0);
 
     return Number((activeTotal + pendingTotal).toFixed(2));
   }, [activeOrder, pendingCart]);

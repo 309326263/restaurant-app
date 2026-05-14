@@ -3,14 +3,27 @@ import { prisma } from "@/lib/prisma";
 type OrderItemInput = any;
 type UpdateOrderItemInput = any;
 
-export async function addItemsToOrder(orderId: number, items: OrderItemInput[]) {
+export async function addItemsToOrder(
+  orderId: number,
+  items: OrderItemInput[]
+) {
   for (const item of items) {
+    const quantity = Number(item.quantity ?? 1);
+    const unitPrice = Number(item.unitPrice ?? 0);
+    const displayName = String(item.displayName || "Item").trim() || "Item";
+
+    const itemType =
+      item.type === "CUSTOM" ? "CUSTOM" : "PRODUCT";
+
     const existing = await prisma.orderItem.findFirst({
       where: {
         orderId,
         productId: item.productId ?? null,
-        customName: item.customName ?? null,
-        variantName: item.variantName || null,
+        displayName,
+        unitPrice,
+        variantName: item.variantName ?? null,
+        station: item.station,
+        type: itemType,
         status: "PENDING",
       },
     });
@@ -19,29 +32,33 @@ export async function addItemsToOrder(orderId: number, items: OrderItemInput[]) 
       await prisma.orderItem.update({
         where: { id: existing.id },
         data: {
-          quantity: existing.quantity + item.quantity,
-          notes: item.note ?? existing.notes,
+          quantity: existing.quantity + quantity,
+          notes: item.notes ?? item.note ?? existing.notes,
         },
       });
     } else {
       await prisma.orderItem.create({
         data: {
-          orderId: orderId,
+          orderId,
           productId: item.productId ?? null,
-          customName: item.customName ?? null,
-          customPrice: item.customPrice ?? null,
-          quantity: item.quantity,
-          variantName: item.variantName || null,
-          variantPrice: item.variantPrice || 0,
+          quantity,
+          unitPrice,
+          displayName,
           station: item.station,
-          notes: item.notes ?? null,
+          variantName: item.variantName ?? null,
+          notes: item.notes ?? item.note ?? null,
+          type: itemType,
+          status: "PENDING",
         },
       });
     }
   }
 }
 
-export async function updateOrderItem(itemId: number, data: UpdateOrderItemInput) {
+export async function updateOrderItem(
+  itemId: number,
+  data: UpdateOrderItemInput
+) {
   await prisma.orderItem.update({
     where: {
       id: itemId,

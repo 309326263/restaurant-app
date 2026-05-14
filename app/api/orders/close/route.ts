@@ -20,11 +20,11 @@ export async function POST(req: Request) {
 
   const items = await prisma.orderItem.findMany({
     where: { orderId: order.id },
-    include: { product: true },
   });
 
   const total = items.reduce(
-    (sum, item) => sum + item.quantity * item.product.price,
+    (sum, item) =>
+      sum + item.quantity * item.unitPrice,
     0
   );
 

@@ -64,19 +64,22 @@ export async function PATCH(
   const newItem =
   await prisma.orderItem.create({
     data: {
-
       orderId: item.orderId,
 
       productId: item.productId,
 
       quantity: 1,
 
+      unitPrice: item.unitPrice,
+      displayName: item.displayName,
+
       variantName: item.variantName,
-      variantPrice: item.variantPrice,
 
       station: item.station,
 
       status: item.status,
+
+      type: item.type,
 
       notes,
     },

@@ -14,6 +14,7 @@ import {
   Flame,
 } from "lucide-react";
 import { useEffect, useMemo } from "react";
+import { getItemName } from "@/lib/orderItem";
 
 export function SendModal({
   open,
@@ -281,12 +282,7 @@ export function SendModal({
                 : "text-zinc-900"
             )}
           >
-            {i.product?.name ||
-              i.customName}
-
-            {i.variantName
-              ? ` - ${i.variantName}`
-              : ""}
+            {getItemName(i)}
           </div>
 
           <input

@@ -3,7 +3,7 @@
 import { useEffect, useRef, useState } from "react";
 import { useUiStore } from "@/app/stores/uiStore";
 import { useOrderStore } from "@/app/stores/orderStore";
-import { getItemStation } from "@/lib/orderItem";
+import { getItemName, getItemStation } from "@/lib/orderItem";
 import { cn } from "@/lib/utils";
 import {
   ChefHat,
@@ -38,15 +38,7 @@ function formatTimeLabel(
 function buildDisplayName(
   item: any
 ) {
-  const base =
-    item.product?.name ||
-    item.customName ||
-    "";
-
-  const variantPart =
-    item.variantName
-      ? ` - ${item.variantName}`
-      : "";
+  const base = getItemName(item).trim();
 
   const note =
     typeof item.notes ===
@@ -59,7 +51,7 @@ function buildDisplayName(
     ? ` - ${note}`
     : "";
 
-  return `${base}${variantPart}${notePart}`;
+  return `${base || "Item"}${notePart}`;
 }
 
 function sortWithNotesFirst(
@@ -146,14 +138,14 @@ function groupByTicketId(
   );
 }
 
-function PendingQtyCluster({
+function PendingQuantityCluster({
   darkMode,
-  qty,
+  quantity,
   onDecrease,
   onIncrease,
 }: {
   darkMode: boolean;
-  qty: number;
+  quantity: number;
   onDecrease: () => void;
   onIncrease: () => void;
 }) {
@@ -190,7 +182,7 @@ function PendingQtyCluster({
             : "text-zinc-700"
         )}
       >
-        {qty}
+        {quantity}
       </div>
 
       <button
@@ -231,22 +223,22 @@ export function CartPanel({
   recentItems: number[];
   onDecreasePending: (
     id: string | number,
-    variant?: string
+    displayName?: string
   ) => void;
 
   onIncreasePending: (
     id: string | number,
-    variant?: string
+    displayName?: string
   ) => void;
 
   onRemovePending: (
     id: string | number,
-    variant?: string
+    displayName?: string
   ) => void;
 
   onPendingNoteChange: (
     id: string | number,
-    variant: string | undefined,
+    displayName: string | undefined,
     note: string
   ) => void;
 
@@ -612,7 +604,7 @@ export function CartPanel({
                   {pendingCartKitchen.map(
                     (p: any) => (
                       <div
-                        key={`${p.id}-${p.variant}`}
+                        key={`${p.id}-${p.displayName}`}
                         className={
                           continuousRowClass
                         }
@@ -623,7 +615,7 @@ export function CartPanel({
                           onClick={() =>
                             onRemovePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                           className={
@@ -634,26 +626,24 @@ export function CartPanel({
                         </button>
 
                         <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
-                          {p.customName ||
-                            p.displayName ||
-                            p.name}
+                          {p.displayName || "Item"}
                         </div>
 
-                        <PendingQtyCluster
+                        <PendingQuantityCluster
                           darkMode={
                             darkMode
                           }
-                          qty={p.qty}
+                          quantity={p.quantity}
                           onDecrease={() =>
                             onDecreasePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                           onIncrease={() =>
                             onIncreasePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                         />
@@ -682,7 +672,7 @@ export function CartPanel({
                   {pendingCartBar.map(
                     (p: any) => (
                       <div
-                        key={`bar-p-${p.id}-${p.variant}`}
+                        key={`bar-p-${p.id}-${p.displayName}`}
                         className={
                           continuousRowClass
                         }
@@ -693,7 +683,7 @@ export function CartPanel({
                           onClick={() =>
                             onRemovePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                           className={
@@ -704,26 +694,24 @@ export function CartPanel({
                         </button>
 
                         <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
-                          {p.customName ||
-                            p.displayName ||
-                            p.name}
+                          {p.displayName || "Item"}
                         </div>
 
-                        <PendingQtyCluster
+                        <PendingQuantityCluster
                           darkMode={
                             darkMode
                           }
-                          qty={p.qty}
+                          quantity={p.quantity}
                           onDecrease={() =>
                             onDecreasePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                           onIncrease={() =>
                             onIncreasePending(
                               p.id,
-                              p.variant
+                              p.displayName
                             )
                           }
                         />
@@ -918,20 +906,14 @@ export function CartPanel({
                           </button>
 
                           <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
-                            {i.product
-                              ?.name ||
-                              i.customName}
-
-                            {i.variantName
-                              ? ` - ${i.variantName}`
-                              : ""}
+                            {i.displayName || "Item"}
                           </div>
 
-                          <PendingQtyCluster
+                          <PendingQuantityCluster
                             darkMode={
                               darkMode
                             }
-                            qty={Number(
+                            quantity={Number(
                               i.quantity
                             )}
                             onDecrease={async () =>
@@ -1003,20 +985,14 @@ export function CartPanel({
                           </button>
 
                           <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
-                            {i.product
-                              ?.name ||
-                              i.customName}
-
-                            {i.variantName
-                              ? ` - ${i.variantName}`
-                              : ""}
+                            {i.displayName || "Item"}
                           </div>
 
-                          <PendingQtyCluster
+                          <PendingQuantityCluster
                             darkMode={
                               darkMode
                             }
-                            qty={Number(
+                            quantity={Number(
                               i.quantity
                             )}
                             onDecrease={async () =>
@@ -1532,13 +1508,7 @@ export function CartPanel({
                     >
 
                       <div className="text-sm font-medium">
-                        {i.product
-                          ?.name ||
-                          i.customName}
-
-                        {i.variantName
-                          ? ` - ${i.variantName}`
-                          : ""}
+                        {i.displayName || "Item"}
                       </div>
 
                       <span
@@ -1696,3 +1666,4 @@ export function CartPanel({
     </div>
   );
 }
+

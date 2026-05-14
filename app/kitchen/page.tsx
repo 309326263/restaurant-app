@@ -2,38 +2,272 @@
 
 import useSWR from "swr";
 import { fetcher } from "@/lib/fetcher";
-import { useEffect, useRef, useState } from "react";
+import {
+  CSSProperties,
+  useCallback,
+  useEffect,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { useKitchenEvents } from "@/app/hooks/useKitchenEvents";
 import "./kitchen.css";
 import { useRouter } from "next/navigation";
-import { History } from "lucide-react";
+import type {
+  KitchenItemAction,
+  KitchenOrder,
+  KitchenPendingAction,
+} from "@/app/types/kitchen";
+import { KitchenHeader } from "@/app/components/kitchen/KitchenHeader";
+import { KitchenSidebar } from "@/app/components/kitchen/KitchenSidebar";
+import { KitchenCard } from "@/app/components/kitchen/KitchenCard";
+import { getKitchenVisibleItems } from "./lib/kitchenVisibility";
+import { sortKitchenOrders } from "./lib/kitchenSorting";
+import {
+  detectChangedOrders,
+  isRecent,
+} from "./lib/kitchenEffects";
+import { playDoubleBeep } from "./lib/kitchenAudio";
+
+const SIDEBAR_WIDTH = 140;
+const SIDEBAR_OPEN = true;
 
 export default function Kitchen() {
-
-  const categoryOrder: Record<string, number> = {
-    "Postres": 1,
-    "Entradas": 2,
-    "Especialidades": 3,
-    "Sopas y Ramen": 4,
-    "Udon y Tallarines": 5,
-    "Arroz": 6,
-    "Sushi": 7,
-  };
   const router = useRouter();
 
-  const { data: orders = [], mutate } = useSWR(
-    "/api/kitchen",
-    fetcher,
-    { refreshInterval: 2000 }
-  );
+  const { data: orders = [], mutate } = useSWR<
+    KitchenOrder[]
+  >("/api/kitchen", fetcher, {
+    refreshInterval: 2000,
+  });
 
   const canvasRef = useRef<HTMLDivElement | null>(null);
-
-  // 🔥 AUDIO REAL DOM
   const audioRef = useRef<HTMLAudioElement | null>(null);
+  const prevRef = useRef<Record<number, number>>({});
+  const orderRefs = useRef<Record<number, HTMLDivElement | null>>({});
+  const isMountedRef = useRef(true);
+  const timeoutsRef = useRef<number[]>([]);
+  const controllersRef = useRef<Set<AbortController>>(new Set());
 
-  // 🔥 mostrar botón volver al inicio
-  const [showBackButton, setShowBackButton] = useState(false);
+  const [showBackButton, setShowBackButton] =
+    useState(false);
+  const [focusedOrder, setFocusedOrder] =
+    useState<number | null>(null);
+  const [fontSize, setFontSize] = useState(18);
+  const [flash, setFlash] = useState<number[]>([]);
+  const [highlightedOrders, setHighlightedOrders] =
+    useState<number[]>([]);
+  const [pendingActions, setPendingActions] = useState<
+    KitchenPendingAction[]
+  >([]);
+
+  const sortedOrders = useMemo(
+    () => sortKitchenOrders(orders),
+    [orders]
+  );
+
+  const releaseOrder = useCallback(async (orderId: number) => {
+    const pendingKey: KitchenPendingAction = `release:${orderId}`;
+
+    if (pendingActions.includes(pendingKey)) return;
+
+    setPendingActions((prev) => [...prev, pendingKey]);
+
+    if (process.env.NODE_ENV === "development") {
+      console.log("[kitchen] release order", orderId);
+    }
+
+    const controller = new AbortController();
+    controllersRef.current.add(controller);
+
+    try {
+
+      const response = await fetch(
+        `/api/orders/${orderId}/ready`,
+        {
+          method: "POST",
+          signal: controller.signal,
+        }
+      );
+
+      if (!response.ok) {
+        throw new Error(
+          `Release order failed: ${response.status}`
+        );
+      }
+    } catch (error) {
+      if (
+        error instanceof DOMException &&
+        error.name === "AbortError"
+      ) {
+        return;
+      }
+
+      if (process.env.NODE_ENV === "development") {
+        console.error("[kitchen] release order failed", {
+          orderId,
+          error,
+        });
+      }
+    } finally {
+      controllersRef.current.delete(controller);
+
+      if (isMountedRef.current) {
+        setPendingActions((prev) =>
+          prev.filter((key) => key !== pendingKey)
+        );
+      }
+    }
+  }, [pendingActions]);
+
+  const updateKitchenItem = useCallback(
+    async (
+      itemId: number,
+      action: KitchenItemAction
+    ) => {
+      const pendingKey: KitchenPendingAction = `item:${itemId}`;
+
+      if (pendingActions.includes(pendingKey)) return;
+
+      setPendingActions((prev) => [...prev, pendingKey]);
+
+      if (process.env.NODE_ENV === "development") {
+        console.log(`[kitchen] item ${action}`, itemId);
+      }
+
+      const controller = new AbortController();
+      controllersRef.current.add(controller);
+
+      try {
+
+        const response = await fetch(
+          `/api/kitchen/items/${itemId}`,
+          {
+            method: "PATCH",
+            signal: controller.signal,
+            headers: {
+              "Content-Type": "application/json",
+            },
+            body: JSON.stringify({ action }),
+          }
+        );
+
+        if (!response.ok) {
+          throw new Error(
+            `Item ${action} failed: ${response.status}`
+          );
+        }
+      } catch (error) {
+        if (
+          error instanceof DOMException &&
+          error.name === "AbortError"
+        ) {
+          return;
+        }
+
+        if (process.env.NODE_ENV === "development") {
+          console.error("[kitchen] item action failed", {
+            itemId,
+            action,
+            error,
+          });
+        }
+      } finally {
+        controllersRef.current.delete(controller);
+
+        if (isMountedRef.current) {
+          setPendingActions((prev) =>
+            prev.filter((key) => key !== pendingKey)
+          );
+        }
+      }
+    },
+    [pendingActions]
+  );
+
+  const scrollToStart = useCallback(() => {
+    const el = canvasRef.current;
+
+    if (!el) return;
+
+    el.scrollTo({
+      left: 0,
+      behavior: "smooth",
+    });
+  }, []);
+
+  const scrollToOrder = useCallback((orderId: number) => {
+    const container = canvasRef.current;
+    const el = orderRefs.current[orderId];
+
+    if (!container || !el) return;
+
+    const left = el.offsetLeft - SIDEBAR_WIDTH;
+
+    if (document.body.contains(container) && document.body.contains(el)) {
+      container.scrollTo({
+        left: left < 0 ? 0 : left,
+        behavior: "smooth",
+      });
+    }
+
+    setFocusedOrder(orderId);
+
+    const timeout = window.setTimeout(() => {
+      if (isMountedRef.current) {
+        setFocusedOrder(null);
+      }
+    }, 2000);
+
+    timeoutsRef.current.push(timeout);
+  }, []);
+
+  const unlockAudio = useCallback(() => {
+    const audio = audioRef.current;
+
+    if (!audio) return;
+
+    audio
+      .play()
+      .then(() => {
+        if (audioRef.current === audio) {
+          audio.pause();
+          audio.currentTime = 0;
+        }
+      })
+      .catch(() => {});
+  }, []);
+
+  useKitchenEvents({
+    onItemUpdated: () => {
+      if (isMountedRef.current) {
+        mutate();
+      }
+    },
+    onOrderUpdated: () => {
+      if (isMountedRef.current) {
+        mutate();
+      }
+    },
+  });
+
+  useEffect(() => {
+    return () => {
+      isMountedRef.current = false;
+
+      timeoutsRef.current.forEach((timeout) => {
+        window.clearTimeout(timeout);
+      });
+
+      timeoutsRef.current = [];
+
+      controllersRef.current.forEach((controller) => {
+        controller.abort();
+      });
+
+      controllersRef.current.clear();
+    };
+  }, []);
 
   useEffect(() => {
     const el = canvasRef.current;
@@ -50,17 +284,6 @@ export default function Kitchen() {
       el.removeEventListener("scroll", handleScroll);
   }, []);
 
-  const scrollToStart = () => {
-    const el = canvasRef.current;
-
-    if (!el) return;
-
-    el.scrollTo({
-      left: 0,
-      behavior: "smooth",
-    });
-  };
-
   useEffect(() => {
     const el = canvasRef.current;
 
@@ -68,249 +291,63 @@ export default function Kitchen() {
 
     const scroll = el.scrollLeft;
 
-    requestAnimationFrame(() => {
-      el.scrollLeft = scroll;
+    const frame = requestAnimationFrame(() => {
+      if (
+        isMountedRef.current &&
+        canvasRef.current === el
+      ) {
+        el.scrollLeft = scroll;
+      }
     });
+
+    return () => cancelAnimationFrame(frame);
   }, [orders]);
 
-  const [focusedOrder, setFocusedOrder] =
-    useState<number | null>(null);
-
-  const [fontSize, setFontSize] = useState(18);
-
-  const prevRef = useRef<Record<number, number>>({});
-
-  const [flash, setFlash] = useState<number[]>([]);
-
-  const [orderPositionMap, setOrderPositionMap] =
-    useState<Record<number, number>>({});
-
-  // 🔥 sidebar highlight
-  const [highlightedOrders, setHighlightedOrders] =
-    useState<number[]>([]);
-
-  const releaseOrder = async (orderId: number) => {
-    await fetch(`/api/orders/${orderId}/ready`, {
-      method: "POST",
-    });
-  };
-
-  const updateKitchenItem = async (
-    itemId: number,
-    action: "start" | "complete" | "revert"
-  ) => {
-    await fetch(`/api/kitchen/items/${itemId}`, {
-      method: "PATCH",
-      headers: {
-        "Content-Type": "application/json",
-      },
-      body: JSON.stringify({ action }),
-    });
-  };
-
-  useKitchenEvents({
-    onItemUpdated: () => mutate(),
-    onOrderUpdated: () => mutate(),
-  });
-
-  const getKitchenVisibleItems = (order: any) => {
-    const kitchenState = order.kitchenView?.stations?.KITCHEN;
-
-    if (kitchenState) {
-      return [
-        ...(kitchenState.SENT ?? []),
-        ...(kitchenState.IN_PROGRESS ?? []),
-      ];
-    }
-
-    // Fallback para compatibilidad con payload previo.
-    return order.items.filter(
-      (i: any) =>
-        (i.status === "SENT" ||
-          i.status === "IN_PROGRESS") &&
-        i.station === "KITCHEN"
-    );
-  };
-
-  // SIDEBAR
-  const orderRefs =
-    useRef<Record<number, HTMLDivElement>>({});
-
-  const [sidebarOpen, setSidebarOpen] =
-    useState(true);
-
-  const SIDEBAR_WIDTH = 140;
-
-  const scrollToOrder = (orderId: number) => {
-    const container = canvasRef.current;
-
-    const el = orderRefs.current[orderId];
-
-    if (!container || !el) return;
-
-    const left = el.offsetLeft - SIDEBAR_WIDTH;
-
-    container.scrollTo({
-      left: left < 0 ? 0 : left,
-      behavior: "smooth",
-    });
-
-    // 🔥 highlight card
-    setFocusedOrder(orderId);
-
-    setTimeout(() => {
-      setFocusedOrder(null);
-    }, 2000);
-  };
-
-  // 🔥 DOUBLE BEEP
-  function playDoubleBeep() {
-    const audio = audioRef.current;
-
-    if (!audio) return;
-
-    audio.currentTime = 0;
-
-    audio.play().catch((err) => {
-      console.log("play blocked", err);
-    });
-
-    setTimeout(() => {
-      if (!audioRef.current) return;
-
-      audioRef.current.currentTime = 0;
-
-      audioRef.current.play().catch((err) => {
-        console.log(
-          "second beep blocked",
-          err
-        );
-      });
-    }, 180);
-  }
-
-  // 🔥 DETECCIÓN DE NUEVOS ITEMS
   useEffect(() => {
-    if (!orders) return;
+    const { next, changedOrderIds } = detectChangedOrders(
+      orders,
+      prevRef.current
+    );
 
-    const next: Record<number, number> = {};
+    if (changedOrderIds.length) {
+      setFlash(changedOrderIds);
 
-    let changedOrders: number[] = [];
+      const flashTimeout = window.setTimeout(() => {
+        if (isMountedRef.current) {
+          setFlash([]);
+        }
+      }, 500);
 
-    orders.forEach((order: any) => {
-      const count =
-        getKitchenVisibleItems(order).length || 0;
+      timeoutsRef.current.push(flashTimeout);
 
-      const prev = prevRef.current[order.id] || 0;
+      const beepTimeout = playDoubleBeep(audioRef.current);
 
-      if (count > prev) {
-        changedOrders.push(order.id);
+      if (beepTimeout !== undefined) {
+        timeoutsRef.current.push(beepTimeout);
       }
 
-      next[order.id] = count;
-    });
-
-    if (changedOrders.length) {
-      setFlash(changedOrders);
-
-      setTimeout(() => setFlash([]), 500);
-
-      // 🔥 BEEP
-      playDoubleBeep();
-
-      // 🔥 sidebar highlight 30s
       setHighlightedOrders((prev) => [
-        ...new Set([...prev, ...changedOrders]),
+        ...new Set([...prev, ...changedOrderIds]),
       ]);
 
-      setTimeout(() => {
-        setHighlightedOrders((prev) =>
-          prev.filter(
-            (id) => !changedOrders.includes(id)
-          )
-        );
+      const highlightTimeout = window.setTimeout(() => {
+        if (isMountedRef.current) {
+          setHighlightedOrders((prev) =>
+            prev.filter(
+              (id) => !changedOrderIds.includes(id)
+            )
+          );
+        }
       }, 30000);
+
+      timeoutsRef.current.push(highlightTimeout);
     }
 
     prevRef.current = next;
   }, [orders]);
 
-  // 🔥 mantener posición estable
-  useEffect(() => {
-    if (!orders.length) return;
-
-    setOrderPositionMap((prev) => {
-      const updated = { ...prev };
-
-      let max = Object.keys(prev).length;
-
-      orders.forEach((order: any) => {
-        if (updated[order.id] === undefined) {
-          updated[order.id] = max;
-
-          max++;
-        }
-      });
-
-      return updated;
-    });
-  }, [orders]);
-
-  
-  const sortedOrders = [...orders]
-      .map((order: any) => {
-        const visible = getKitchenVisibleItems(order);
-
-        const minCategory =
-        visible.length
-          ? visible.reduce((min: number, i: any) => {
-              const rank = categoryOrder[i.product?.categoryId as any] ?? 9999;
-              return rank < min ? rank : min;
-            }, 9999)
-          : 9999;
-
-        return { ...order, _catOrder: minCategory };
-      })
-      .sort((a: any, b: any) => {
-        const diff = a._catOrder - b._catOrder;
-
-        if (diff !== 0) return diff;
-
-        return (
-          new Date(a.createdAt ?? a.id).getTime() -
-          new Date(b.createdAt ?? b.id).getTime()
-        );
-      });
-  // 🔥 agrupar por ticket
-  function groupByTicket(items: any[]) {
-    const map: Record<number, any[]> = {};
-
-    items.forEach((i) => {
-      const key = i.ticketId || 0;
-
-      if (!map[key]) map[key] = [];
-
-      map[key].push(i);
-    });
-
-    return Object.entries(map).sort(
-      (a: any, b: any) =>
-        new Date(b[1][0].sentAt).getTime() -
-        new Date(a[1][0].sentAt).getTime()
-    );
-  }
-
-  // 🔥 highlight últimos 2 min
-  const isRecent = (date: string) => {
-    const diff =
-      Date.now() - new Date(date).getTime();
-
-    return diff < 120000;
-  };
-
   return (
     <>
-      {/* 🔥 AUDIO */}
       <audio
         ref={audioRef}
         src="/beep.mp3"
@@ -322,20 +359,9 @@ export default function Kitchen() {
         style={
           {
             "--kitchen-font": `${fontSize}px`,
-          } as any
+          } as CSSProperties
         }
-        onClick={() => {
-          audioRef.current
-            ?.play()
-            .then(() => {
-              if (audioRef.current) {
-                audioRef.current.pause();
-
-                audioRef.current.currentTime = 0;
-              }
-            })
-            .catch(() => {});
-        }}
+        onClick={unlockAudio}
       >
         {showBackButton && (
           <button
@@ -346,124 +372,27 @@ export default function Kitchen() {
           </button>
         )}
 
-        <div className="kitchen-header-bar">
-          <div className="kitchen-title">
-            <span className="kitchen-icon">
-              🍳
-            </span>
+        <KitchenHeader
+          onHistory={() => router.push("/kitchen/history")}
+          onDecreaseFont={() =>
+            setFontSize((s) => Math.max(12, s - 2))
+          }
+          onIncreaseFont={() =>
+            setFontSize((s) => Math.min(30, s + 2))
+          }
+        />
 
-            <span className="kitchen-text">
-              Cocina
-            </span>
-          </div>
-
-          <div
-            style={{
-              display: "flex",
-              alignItems: "center",
-              gap: "10px",
-              marginLeft: "auto",
-            }}
-          >
-            <button
-              onClick={() =>
-                router.push("/kitchen/history")
-              }
-              style={{
-                display: "flex",
-                alignItems: "center",
-                gap: "8px",
-                padding: "10px 14px",
-                borderRadius: "12px",
-                border: "1px solid #3f3f46",
-                background: "#27272a",
-                color: "white",
-                fontWeight: 600,
-                cursor: "pointer",
-                transition: "0.2s",
-              }}
-            >
-              <History size={18} />
-
-              <span className="history-label">
-                注文履歴
-              </span>
-            </button>
-
-            <div className="kitchen-font-controls">
-              <button
-                onClick={() =>
-                  setFontSize((s) =>
-                    Math.max(12, s - 2)
-                  )
-                }
-              >
-                A-
-              </button>
-
-              <button
-                onClick={() =>
-                  setFontSize((s) =>
-                    Math.min(30, s + 2)
-                  )
-                }
-              >
-                A+
-              </button>
-            </div>
-          </div>
-        </div>
-
-        <div
-          className="kitchen-canvas"
-          ref={canvasRef}
-        >
+        <div className="kitchen-canvas" ref={canvasRef}>
           <div className="kitchen-track">
+            <KitchenSidebar
+              orders={sortedOrders}
+              highlightedOrders={highlightedOrders}
+              open={SIDEBAR_OPEN}
+              onSelectOrder={scrollToOrder}
+            />
 
-            {/* SIDEBAR */}
-            <div
-              className={`kitchen-overlay ${
-                sidebarOpen ? "open" : ""
-              }`}
-            >
-              <div className="kitchen-overlay-list">
-                {sortedOrders.map((order: any) => {
-                  const visibleItems =
-                    getKitchenVisibleItems(order);
-
-                  if (!visibleItems.length)
-                    return null;
-
-                  const count =
-                    visibleItems.length;
-
-                  const isActive =
-                    highlightedOrders.includes(
-                      order.id
-                    );
-
-                  return (
-                    <button
-                      key={order.id}
-                      className={`kitchen-overlay-item ${
-                        isActive ? "blink" : ""
-                      }`}
-                      onClick={() =>
-                        scrollToOrder(order.id)
-                      }
-                    >
-                      {order.table.name} (
-                      {count})
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            {/* CARDS */}
-            {sortedOrders.map((order: any) => {
-              const visible =
-                getKitchenVisibleItems(order);
+            {sortedOrders.map((order) => {
+              const visible = getKitchenVisibleItems(order);
 
               if (!visible.length) return null;
 
@@ -471,141 +400,22 @@ export default function Kitchen() {
                 <div
                   key={order.id}
                   ref={(el) => {
-                    if (el)
-                      orderRefs.current[
-                        order.id
-                      ] = el;
+                    orderRefs.current[order.id] = el;
                   }}
-                  className={`kitchen-card ${
-                    flash.includes(order.id) ? "flash" : ""
-                  } ${
-                    focusedOrder === order.id ? "focus-card" : ""
-                  }`}
-                  data-cat={
-                    visible?.[0]?.product?.categoryId
-                  }
                 >
-                  <div
-                    className={`category-line ${
-                      visible?.[0]?.product?.categoryId === 1
-                        ? "line-orange"
-                        : visible?.[0]?.product?.categoryId === 8
-                        ? "line-green"
-                        : visible?.[0]?.product?.categoryId === 5
-                        ? "line-purple-top"
-                        : ""
-                    }`}
-                  />
-                  <div className="kitchen-card-header">
-                    <span className="kitchen-table">
-                      {order.table.name}
-                    </span>
-                  </div>
-
-                  <div className="kitchen-items">
-                    {groupByTicket(visible).map(
-                      (
-                        [ticketId, items]: any
-                      ) => {
-                        const sentTime =
-                          items[0]?.sentAt;
-
-                        const highlight =
-                          sentTime &&
-                          isRecent(sentTime);
-
-                        return (
-                          <div
-                            key={ticketId}
-                            className={`kitchen-block ${
-                              highlight
-                                ? "kitchen-block-new"
-                                : ""
-                            }`}
-                          >
-                            <div className="kitchen-time">
-                              {sentTime
-                                ? new Date(
-                                    sentTime
-                                  ).toLocaleTimeString()
-                                : ""}
-                            </div>
-
-                            {items.map(
-                              (item: any) => (
-                                <div
-                                  key={item.id}
-                                  className="kitchen-item"
-                                >
-                                  <div>
-                                    {item.variantName
-                                      ? `${item.product?.name || item.customName} - ${item.variantName}`
-                                      : item.product
-                                          ?.name || item.customName}{" "}
-                                    x {item.quantity}
-                                  </div>
-                                  <div
-                                    style={{
-                                      display: "flex",
-                                      gap: "8px",
-                                      marginTop: "4px",
-                                    }}
-                                  >
-                                    {item.status === "SENT" && (
-                                      <button
-                                        onClick={() =>
-                                          updateKitchenItem(
-                                            item.id,
-                                            "start"
-                                          )
-                                        }
-                                      >
-                                        Empezar
-                                      </button>
-                                    )}
-                                    {item.status ===
-                                      "IN_PROGRESS" && (
-                                      <>
-                                        <button
-                                          onClick={() =>
-                                            updateKitchenItem(
-                                              item.id,
-                                              "complete"
-                                            )
-                                          }
-                                        >
-                                          Terminar
-                                        </button>
-                                        <button
-                                          onClick={() =>
-                                            updateKitchenItem(
-                                              item.id,
-                                              "revert"
-                                            )
-                                          }
-                                        >
-                                          Revertir
-                                        </button>
-                                      </>
-                                    )}
-                                  </div>
-                                </div>
-                              )
-                            )}
-                          </div>
-                        );
-                      }
+                  <KitchenCard
+                    order={order}
+                    visibleItems={visible}
+                    isFlashing={flash.includes(order.id)}
+                    isFocused={focusedOrder === order.id}
+                    isReleasePending={pendingActions.includes(
+                      `release:${order.id}`
                     )}
-                  </div>
-
-                  <button
-                    className="kitchen-btn"
-                    onClick={() =>
-                      releaseOrder(order.id)
-                    }
-                  >
-                    Liberar
-                  </button>
+                    pendingActions={pendingActions}
+                    onRelease={releaseOrder}
+                    onUpdateItem={updateKitchenItem}
+                    isRecent={isRecent}
+                  />
                 </div>
               );
             })}

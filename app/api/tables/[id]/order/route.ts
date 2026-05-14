@@ -10,34 +10,25 @@ export async function GET(
   const order = await prisma.order.findFirst({
     where: {
       tableId,
-      status: "OPEN", // 🔥 CLAVE: solo activa
+      status: "OPEN",
     },
     include: {
-      items: {
+      items: true,
+      tickets: {
         include: {
-          product: true,
+          items: true,
         },
       },
-
-      tickets: {
-          include: {
-            items: {
-              include: {
-                product: true,
-              },
-            },
-          },
-        },
     },
   });
 
   return Response.json(
-  order
-    ? {
-        id: order.id,
-        items: order.items,
-        tickets: order.tickets,
-      }
-    : null
-);
+    order
+      ? {
+          id: order.id,
+          items: order.items,
+          tickets: order.tickets,
+        }
+      : null
+  );
 }
