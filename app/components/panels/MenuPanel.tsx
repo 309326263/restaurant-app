@@ -1,28 +1,54 @@
 "use client";
 
-const kitchenCategories = [
-  "Postres",
-  "Entradas",
-  "Especialidades y Paquetes",
-  "Sopas y Ramen",
-  "Udon y Tallarines",
-  "Arroz",
-  "Sushi",
-  "Bebidas",
-];
+import { useMemo, useState } from "react";
+import { useUiStore } from "@/app/stores/uiStore";
+import { cn } from "@/lib/utils";
+import {
+  LayoutGrid,
+  Rows3,
+  Moon,
+  Sun,
+  ChevronRight,
+  Soup,
+  Beef,
+  Fish,
+  IceCreamCone,
+  CookingPot,
+  Salad,
+  CupSoda,
+  BadgeJapaneseYen,
+  PanelLeft,
+  BadgeDollarSign,
+  Plus,
+} from "lucide-react";
+import { motion, AnimatePresence } from "framer-motion";
 
-const categoryConfig = [
-  { id: "postres", name: "Postres", icon: "🍰" },
-  { id: "entradas", name: "Entradas", icon: "🥗" },
-  { id: "especialidades", name: "Especialidades", icon: "🍱" },
-  { id: "sopas", name: "Sopas y Ramen", icon: "🍲" },
-  { id: "udon", name: "Udon y Tallarines", icon: "🍝" },
-  { id: "arroz", name: "Arroz", icon: "🍚" },
-  { id: "sushi", name: "Sushi", icon: "🍣" },
-  { id: "bebidas", name: "Bebidas", icon: "🥤" },
-];
+type SidebarLayout = "vertical" | "horizontal";
+type ProductsLayout = "list" | "grid";
 
-const iconMap = Object.fromEntries(categoryConfig.map((c) => [c.name, c.icon]));
+const categoryIcons: Record<string, any> = {
+  Postres: IceCreamCone,
+  Entradas: Salad,
+  Especialidades: Beef,
+  "Sopas y Ramen": Soup,
+  "Udon y Tallarines": CookingPot,
+  Arroz: BadgeJapaneseYen,
+  Sushi: Fish,
+  Bebidas: CupSoda,
+  "Manual": Plus,
+};
+
+const categoryColors: Record<string, string> = {
+  Postres: "bg-pink-100 text-pink-700",
+  Entradas: "bg-emerald-100 text-emerald-700",
+  Especialidades: "bg-orange-100 text-orange-700",
+  "Sopas y Ramen": "bg-amber-100 text-amber-700",
+  "Udon y Tallarines": "bg-yellow-100 text-yellow-700",
+  Arroz: "bg-lime-100 text-lime-700",
+  Sushi: "bg-cyan-100 text-cyan-700",
+  Bebidas: "bg-sky-100 text-sky-700",
+  "Manual": "bg-violet-100 text-violet-700",
+};
 
 export function MenuPanel({
   categories,
@@ -32,92 +58,630 @@ export function MenuPanel({
   setSelectedVariant,
   addToPending,
   onOpenCustomItemModal,
-}: {
-  categories: any[];
-  openedCategoryId: number | null;
-  selectedVariant: number | null;
-  setOpenedCategoryId: (id: number | null) => void;
-  setSelectedVariant: (id: number | null) => void;
-  addToPending: (product: any) => void;
-  onOpenCustomItemModal: () => void;
-}) {
+}: any) {
+  const [sidebarLayout, setSidebarLayout] =
+    useState<SidebarLayout>("vertical");
+
+  const [productsLayout, setProductsLayout] =
+    useState<ProductsLayout>("list");
+
+  const {
+    darkMode,
+    toggleDarkMode,
+  } = useUiStore();
+
+  const [showPrices, setShowPrices] =
+    useState(true);
+
+  /**
+   * HIDE INTERNAL CATEGORY
+   * + ALWAYS ADD MANUAL BUTTON AT THE END
+   */
+  const visibleCategories = useMemo(() => {
+    const filtered = categories.filter(
+      (c: any) =>
+        c.name !== "Manuales" &&
+        c.name !== "Manual"
+    );
+
+    return [
+      ...filtered,
+      {
+        id: "manual-category",
+        name: "Manual",
+        products: [],
+      },
+    ];
+  }, [categories]);
+
+  const activeCategory = useMemo(() => {
+    return categories.find(
+      (c: any) =>
+        c.id === openedCategoryId
+    );
+  }, [categories, openedCategoryId]);
+
   return (
-    <div className="home-menu">
-      <div className="panel-scroll">
-        <div className="categories-grid">
-          {kitchenCategories.map((catName) => {
-            const cat = categories.find((c: any) => c.name === catName);
-            if (!cat) return null;
-            return (
-              <button
-                key={cat.id}
-                onClick={() => setOpenedCategoryId(openedCategoryId === cat.id ? null : cat.id)}
-                className={`category-button ${openedCategoryId === cat.id ? "category-active" : ""}`}
-              >
-                <span className="category-icon">{iconMap[cat.name]}</span>
-                <span className="category-text">{cat.name}</span>
-              </button>
-            );
-          })}
-          <button onClick={onOpenCustomItemModal} className="custom-item-button">
-            + Producto manual
-          </button>
+    <div
+      className={cn(
+        "h-full flex flex-col overflow-hidden transition-colors duration-200",
+        darkMode
+          ? "bg-zinc-950 text-white"
+          : "bg-zinc-100 text-zinc-900"
+      )}
+    >
+
+      {/* =====================================================
+          HEADER
+      ===================================================== */}
+      <div
+        className={cn(
+          "h-[60px] shrink-0 border-b px-4 flex items-center justify-between",
+          "transition-colors duration-200",
+          darkMode
+            ? "bg-zinc-900 border-zinc-800"
+            : "bg-white border-zinc-200"
+        )}
+      >
+
+        <div className="flex flex-col">
+          <span className="text-sm font-semibold tracking-tight">
+            Menú
+          </span>
+
+          <span
+            className={cn(
+              "text-[11px]",
+              darkMode
+                ? "text-zinc-400"
+                : "text-muted-foreground"
+            )}
+          >
+            Sistema POS
+          </span>
         </div>
 
-        {categories.map((cat: any) => {
-          if (openedCategoryId !== cat.id) return null;
-          return (
-            <div key={cat.id} className="category-panel">
-              <h2 className="category-title">{cat.name}</h2>
-              <div className="product-list">
-                {cat.products.map((prod: any) => (
-                  <div key={prod.id} className="product-card">
-                    <div
-                      onClick={() => {
-                        if (prod.variants?.length > 0) {
-                          setSelectedVariant(selectedVariant === prod.id ? null : prod.id);
-                        } else {
-                          addToPending({ ...prod, displayName: prod.name, variant: null, variantPrice: 0 });
-                        }
-                      }}
-                      className="product-main"
-                    >
-                      <span className="product-name">{prod.name}</span>
-                      <span className="product-price">${prod.price}</span>
-                    </div>
-                    <div
-                      className={`variant-panel ${
-                        selectedVariant === prod.id ? "variant-visible" : "variant-hidden"
-                      }`}
-                    >
-                      <div className="variant-content">
-                        {prod.variants?.map((v: any) => (
-                          <button
-                            key={v.id}
-                            onClick={() => {
-                              addToPending({
-                                ...prod,
-                                displayName: `${prod.name} - ${v.name}`,
-                                variant: v.name,
-                                variantPrice: v.price,
-                              });
-                              setSelectedVariant(null);
-                            }}
-                            className="variant-button"
-                          >
-                            {v.name}
-                            {v.price > 0 ? ` (+$${v.price})` : ""}
-                          </button>
-                        ))}
-                      </div>
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          );
-        })}
+        {/* ACTIONS */}
+        <div className="flex items-center gap-2">
+
+          {/* DARK MODE */}
+          <button
+            onClick={() =>
+              toggleDarkMode()
+            }
+            className={cn(
+              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
+              darkMode
+                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                : "bg-white border-zinc-200 hover:bg-zinc-100"
+            )}
+          >
+            {darkMode ? (
+              <Sun size={16} />
+            ) : (
+              <Moon size={16} />
+            )}
+          </button>
+
+          {/* CATEGORY LAYOUT */}
+          <button
+            onClick={() =>
+              setSidebarLayout(
+                sidebarLayout ===
+                  "vertical"
+                  ? "horizontal"
+                  : "vertical"
+              )
+            }
+            className={cn(
+              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
+              darkMode
+                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                : "bg-white border-zinc-200 hover:bg-zinc-100"
+            )}
+          >
+            <PanelLeft size={16} />
+          </button>
+
+          {/* PRODUCTS LAYOUT */}
+          <button
+            onClick={() =>
+              setProductsLayout(
+                productsLayout ===
+                  "list"
+                  ? "grid"
+                  : "list"
+              )
+            }
+            className={cn(
+              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
+              darkMode
+                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                : "bg-white border-zinc-200 hover:bg-zinc-100"
+            )}
+          >
+            {productsLayout ===
+            "list" ? (
+              <LayoutGrid size={16} />
+            ) : (
+              <Rows3 size={16} />
+            )}
+          </button>
+
+          {/* SHOW / HIDE PRICES */}
+          <button
+            onClick={() =>
+              setShowPrices(!showPrices)
+            }
+            className={cn(
+              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
+              darkMode
+                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
+                : "bg-white border-zinc-200 hover:bg-zinc-100"
+            )}
+          >
+            <BadgeDollarSign size={16} />
+          </button>
+
+        </div>
       </div>
+
+      {/* =====================================================
+          CONTENT
+      ===================================================== */}
+      <motion.div
+        layout
+        transition={{
+          duration: 0.18,
+          ease: "easeOut",
+        }}
+        className={cn(
+          "flex-1 gap-2 p-2 min-h-0",
+          sidebarLayout === "horizontal"
+            ? "flex flex-row overflow-hidden"
+            : "flex flex-col overflow-y-auto"
+        )}
+      >
+
+        {/* =================================================
+            CATEGORY BLOCK
+        ================================================= */}
+        <motion.div
+          layout
+          transition={{
+            duration: 0.25,
+            ease: "linear",
+          }}
+          className={cn(
+            "shrink-0 min-h-0",
+            sidebarLayout ===
+              "horizontal"
+              ? "w-[88px] overflow-y-auto"
+              : "w-full"
+          )}
+        >
+
+          <motion.div
+            layout
+            transition={{
+              duration: 0.25,
+              ease: "linear",
+            }}
+            className={cn(
+              sidebarLayout ===
+                "horizontal"
+                ? "flex flex-col gap-1.5 pb-2"
+                : `
+                  grid gap-2
+                  grid-cols-[repeat(auto-fit,minmax(220px,1fr))]
+                `
+            )}
+          >
+
+            {visibleCategories.map(
+              (cat: any) => {
+                const active =
+                  openedCategoryId ===
+                  cat.id;
+
+                const Icon =
+                  categoryIcons[
+                    cat.name
+                  ] || Beef;
+
+                return (
+                  <motion.button
+                    layout
+                    transition={{
+                      duration: 0.18,
+                      ease: "easeOut",
+                    }}
+                    key={cat.id}
+                    onClick={() => {
+
+                      /**
+                       * MANUAL PRODUCT
+                       */
+                      if (
+                        cat.name ===
+                        "Manual"
+                      ) {
+                        onOpenCustomItemModal?.();
+                        return;
+                      }
+
+                      setOpenedCategoryId(
+                        active
+                          ? null
+                          : cat.id
+                      );
+                    }}
+                    className={cn(
+                      "group relative overflow-hidden transition-all duration-200",
+                      "border rounded-md",
+                      "flex items-center",
+                      "text-left p-2 gap-2",
+                      "min-h-[56px]",
+
+                      sidebarLayout === "horizontal"
+                        ? "justify-center w-full"
+                        : "justify-start w-full",
+
+                      active
+                        ? darkMode
+                          ? "bg-zinc-800 border-zinc-700 shadow-lg"
+                          : "bg-white border-primary shadow-md ring-1 ring-primary/10"
+                        : darkMode
+                        ? "bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
+                        : "bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+                    )}
+                  >
+
+                    {/* ICON */}
+                    <div
+                      className={cn(
+                        "shrink-0 rounded-md flex items-center justify-center",
+
+                        sidebarLayout === "horizontal"
+                          ? "w-10 h-10"
+                          : "w-8 h-8",
+
+                        categoryColors[
+                          cat.name
+                        ]
+                      )}
+                    >
+                      <Icon size={14} />
+                    </div>
+
+                    {/* TEXT */}
+                    {sidebarLayout !== "horizontal" && (
+                      <span
+                        className={cn(
+                          "font-semibold leading-tight text-xs",
+                          "break-words whitespace-normal",
+                          darkMode &&
+                            "text-white"
+                        )}
+                      >
+                        {cat.name}
+                      </span>
+                    )}
+
+                  </motion.button>
+                );
+              }
+            )}
+
+          </motion.div>
+        </motion.div>
+
+        {/* =================================================
+            PRODUCTS BLOCK
+        ================================================= */}
+        <motion.div
+          layout
+          transition={{
+            duration: 0.18,
+            ease: "easeOut",
+          }}
+          className={cn(
+            "flex-1 min-w-0 min-h-0",
+            sidebarLayout === "horizontal"
+              ? "overflow-y-auto"
+              : "overflow-hidden"
+          )}
+        >
+
+          <div
+            className={cn(
+              "h-full rounded-md border overflow-hidden transition-colors duration-200",
+              darkMode
+                ? "bg-zinc-900 border-zinc-800"
+                : "bg-white border-zinc-200"
+            )}
+          >
+
+            {!activeCategory && (
+              <div className="h-full flex items-center justify-center p-10">
+
+                <div className="text-center">
+
+                  <div className="text-lg font-semibold">
+                    Selecciona una categoría
+                  </div>
+
+                  <div
+                    className={cn(
+                      "text-sm mt-1",
+                      darkMode
+                        ? "text-zinc-400"
+                        : "text-muted-foreground"
+                    )}
+                  >
+                    Elige una categoría para visualizar productos
+                  </div>
+
+                </div>
+
+              </div>
+            )}
+
+            {activeCategory && (
+
+              <div className="h-full flex flex-col overflow-hidden">
+
+                {/* PRODUCTS */}
+                <div className="flex-1 overflow-y-auto p-2">
+
+                  <motion.div
+                    layout
+                    transition={{
+                      duration: 0.18,
+                      ease: "easeOut",
+                    }}
+                    className={cn(
+                      productsLayout ===
+                        "grid"
+                        ? `
+                          grid gap-2
+                          grid-cols-1
+                          md:grid-cols-2
+                          xl:grid-cols-3
+                        `
+                        : "flex flex-col gap-2"
+                    )}
+                  >
+
+                    {activeCategory.products.map(
+                      (prod: any) => {
+                        const opened =
+                          selectedVariant ===
+                          prod.id;
+
+                        return (
+                          <motion.div
+                            layout
+                            transition={{
+                              duration: 0.18,
+                              ease: "easeOut",
+                            }}
+                            key={prod.id}
+                            className={cn(
+                              "group rounded-md border overflow-hidden transition-all duration-200",
+
+                              opened
+                                ? darkMode
+                                  ? "bg-zinc-800 border-zinc-700 shadow-lg"
+                                  : "bg-white border-primary shadow-md ring-1 ring-primary/10"
+                                : darkMode
+                                ? "bg-zinc-900 border-zinc-800 hover:border-zinc-700"
+                                : "bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+                            )}
+                          >
+
+                            {/* PRODUCT */}
+                            <button
+                              onClick={() => {
+
+                                if (
+                                  prod.variants
+                                    ?.length >
+                                  0
+                                ) {
+                                  setSelectedVariant(
+                                    opened
+                                      ? null
+                                      : prod.id
+                                  );
+
+                                  return;
+                                }
+
+                                addToPending({
+                                  ...prod,
+                                  displayName:
+                                    prod.name,
+                                  variant: null,
+                                  variantPrice: 0,
+                                });
+                              }}
+                              className={cn(
+                                "w-full p-3 flex items-center justify-between text-left transition-colors min-h-[56px]",
+                                darkMode
+                                  ? "hover:bg-zinc-800"
+                                  : "hover:bg-zinc-50"
+                              )}
+                            >
+
+                              <div className="min-w-0">
+
+                                <div className="font-semibold truncate text-sm">
+                                  {prod.name}
+                                </div>
+
+                              </div>
+
+                              <div className="flex items-center gap-3 shrink-0">
+
+                                {showPrices && (
+                                  <span
+                                    className={cn(
+                                      "text-sm font-medium",
+                                      darkMode
+                                        ? "text-zinc-400"
+                                        : "text-muted-foreground"
+                                    )}
+                                  >
+                                    $
+                                    {
+                                      prod.price
+                                    }
+                                  </span>
+                                )}
+
+                                {prod.variants
+                                  ?.length >
+                                  0 && (
+                                  <ChevronRight
+                                    size={16}
+                                    className={cn(
+                                      "transition-transform duration-200",
+                                      opened &&
+                                        "rotate-90"
+                                    )}
+                                  />
+                                )}
+
+                              </div>
+
+                            </button>
+
+                            {/* VARIANTS */}
+                            <AnimatePresence initial={false}>
+                              {opened && (
+                                <motion.div
+                                  layout
+                                  initial={{
+                                    height: 0,
+                                    opacity: 0,
+                                  }}
+                                  animate={{
+                                    height:
+                                      "auto",
+                                    opacity: 1,
+                                  }}
+                                  exit={{
+                                    height: 0,
+                                    opacity: 0,
+                                  }}
+                                  transition={{
+                                    duration: 0.18,
+                                    ease: "easeOut",
+                                  }}
+                                  className={cn(
+                                    "overflow-hidden border-t",
+                                    darkMode
+                                      ? "bg-zinc-800 border-zinc-700"
+                                      : "bg-zinc-50 border-zinc-200"
+                                  )}
+                                >
+
+                                  {/* VARIANTS GRID */}
+                                  <div
+                                    className="
+                                      p-2
+                                      grid
+                                      gap-2
+                                      grid-cols-[repeat(auto-fit,minmax(140px,1fr))]
+                                    "
+                                  >
+
+                                    {prod.variants?.map(
+                                      (
+                                        v: any
+                                      ) => (
+                                        <button
+                                          key={
+                                            v.id
+                                          }
+                                          onClick={() => {
+
+                                            addToPending(
+                                              {
+                                                ...prod,
+                                                displayName: `${prod.name} - ${v.name}`,
+                                                variant:
+                                                  v.name,
+                                                variantPrice:
+                                                  v.price,
+                                              }
+                                            );
+
+                                            setSelectedVariant(
+                                              null
+                                            );
+                                          }}
+                                          className={cn(
+                                            "w-full min-h-[44px]",
+                                            "px-3 py-2 rounded-md border",
+                                            "text-sm font-medium",
+                                            "transition-all duration-200",
+                                            "flex items-center justify-center text-center",
+
+                                            darkMode
+                                              ? `
+                                                bg-zinc-900
+                                                border-zinc-700
+                                                hover:bg-zinc-700
+                                              `
+                                              : `
+                                                bg-white
+                                                border-zinc-200
+                                                hover:bg-zinc-100
+                                              `
+                                          )}
+                                        >
+
+                                          <span className="break-words whitespace-normal">
+
+                                            {
+                                              v.name
+                                            }
+
+                                            {showPrices &&
+                                              v.price >
+                                                0 &&
+                                              ` (+$${v.price})`}
+
+                                          </span>
+
+                                        </button>
+                                      )
+                                    )}
+
+                                  </div>
+
+                                </motion.div>
+                              )}
+                            </AnimatePresence>
+
+                          </motion.div>
+                        );
+                      }
+                    )}
+
+                  </motion.div>
+
+                </div>
+
+              </div>
+            )}
+
+          </div>
+        </motion.div>
+
+      </motion.div>
     </div>
   );
 }

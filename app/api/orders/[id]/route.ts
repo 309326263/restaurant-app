@@ -32,3 +32,51 @@ export async function PATCH(
     );
   }
 }
+
+/* =========================================================
+   🔥 FIX CRÍTICO: AGREGAR GET (LO QUE TE FALTABA)
+========================================================= */
+export async function GET(
+  req: Request,
+  context: { params: Promise<{ id: string }> }
+) {
+  try {
+    const { id } = await context.params;
+    const orderId = Number(id);
+
+    if (isNaN(orderId)) {
+      return Response.json(
+        { ok: false, error: "Order ID inválido" },
+        { status: 400 }
+      );
+    }
+
+    const order = await prisma.order.findUnique({
+      where: { id: orderId },
+      include: {
+        items: {
+          include: {
+            product: true,
+          },
+        },
+        table: true,
+      },
+    });
+
+    if (!order) {
+      return Response.json(
+        { ok: false, error: "Orden no encontrada" },
+        { status: 404 }
+      );
+    }
+
+    return Response.json(order);
+  } catch (error) {
+    console.error(error);
+
+    return Response.json(
+      { ok: false, error: "Error al obtener orden" },
+      { status: 500 }
+    );
+  }
+}

@@ -69,7 +69,7 @@ export async function PATCH(
 
       productId: item.productId,
 
-      qty: 1,
+      quantity: 1,
 
       variantName: item.variantName,
       variantPrice: item.variantPrice,

@@ -1,5 +1,6 @@
 "use client";
 
+import { useUiStore } from "@/app/stores/uiStore";
 import { ReactNode } from "react";
 
 export function HomeLayout({
@@ -13,26 +14,27 @@ export function HomeLayout({
   cartPanel: ReactNode;
   modals?: ReactNode;
 }) {
+  const { sidebarCollapsed } = useUiStore();
+
   return (
-    <main className="home-layout">
-      <div className="top-navbar">
-        <div className="top-left">
-          <h1 className="top-logo">SatoSan</h1>
-          <span className="top-subtitle">Restaurant Dashboard</span>
-        </div>
-        <div className="top-nav-links">
-          <button className="top-nav-button top-nav-active">Dashboard</button>
-          <button className="top-nav-button">Cocina</button>
-          <button className="top-nav-button">Historial</button>
-          <button className="top-nav-button">Productos</button>
-        </div>
-      </div>
-      <div className="home-content">
+    <div className="h-screen flex overflow-hidden bg-background text-foreground">
+
+      {/* LEFT */}
+      <div className={sidebarCollapsed ? "w-[80px] h-full" : "w-[260px] h-full"}>
         {tablesPanel}
+      </div>
+
+      {/* CENTER */}
+      <div className="flex-1 h-full overflow-hidden">
         {menuPanel}
+      </div>
+
+      {/* RIGHT */}
+      <div className="w-[360px] h-full border-l">
         {cartPanel}
       </div>
+
       {modals}
-    </main>
+    </div>
   );
 }

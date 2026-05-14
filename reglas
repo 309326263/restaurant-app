@@ -1,0 +1,31 @@
+REGLA QUE TE RECOMIENDO (muy importante)
+
+DISEÑo
+
+Para que esto escale bien:
+
+👉 Tailwind SOLO para:
+layout
+spacing
+flex/grid
+estructura
+responsive
+👉 Tokens SOLO para:
+colores
+backgrounds
+text
+borders
+estados
+
+
+
+
+🧱 “POS UI DESIGN CONTRACT”
+
+Todo componente debe seguir:
+
+mismos radios
+mismas transiciones
+misma tipografía base
+mismos estados (hover/active)
+mismos spacing tokens
