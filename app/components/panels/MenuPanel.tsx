@@ -22,9 +22,13 @@ import {
   Plus,
 } from "lucide-react";
 import { motion, AnimatePresence } from "framer-motion";
-
+import { IconButton } from "@/app/src/components/ui/IconButton";
+import { PanelHeader } from "@/app/src/components/ui/PanelHeader";
+import { InteractiveCard } from "@/app/src/components/ui/InteractiveCard";
+import { useOrderStore } from "@/app/stores/orderStore";
 type SidebarLayout = "vertical" | "horizontal";
 type ProductsLayout = "list" | "grid";
+
 
 const categoryIcons: Record<string, any> = {
   Postres: IceCreamCone,
@@ -59,6 +63,17 @@ export function MenuPanel({
   addToPending,
   onOpenCustomItemModal,
 }: any) {
+
+  const selectedTable =
+  useOrderStore(
+    (s) => s.selectedTable
+  );
+
+  const triggerTableSelectionError =
+    useUiStore(
+      (s) =>
+        s.triggerTableSelectionError
+  );
   const [sidebarLayout, setSidebarLayout] =
     useState<SidebarLayout>("vertical");
 
@@ -114,118 +129,67 @@ export function MenuPanel({
       {/* =====================================================
           HEADER
       ===================================================== */}
-      <div
-        className={cn(
-          "h-[60px] shrink-0 border-b px-4 flex items-center justify-between",
-          "transition-colors duration-200",
-          darkMode
-            ? "bg-zinc-900 border-zinc-800"
-            : "bg-white border-zinc-200"
-        )}
-      >
+      <PanelHeader
+        title="Menú"
+        description="Sistema POS"
+        actions={
+          <>
+            <IconButton
+              onClick={() =>
+                toggleDarkMode()
+              }
+            >
+              {darkMode ? (
+                <Sun size={16} />
+              ) : (
+                <Moon size={16} />
+              )}
+            </IconButton>
 
-        <div className="flex flex-col">
-          <span className="text-sm font-semibold tracking-tight">
-            Menú
-          </span>
+            <IconButton
+              onClick={() =>
+                setSidebarLayout(
+                  sidebarLayout ===
+                    "vertical"
+                    ? "horizontal"
+                    : "vertical"
+                )
+              }
+            >
+              <PanelLeft size={16} />
+            </IconButton>
 
-          <span
-            className={cn(
-              "text-[11px]",
-              darkMode
-                ? "text-zinc-400"
-                : "text-muted-foreground"
-            )}
-          >
-            Sistema POS
-          </span>
-        </div>
+            <IconButton
+              onClick={() =>
+                setProductsLayout(
+                  productsLayout ===
+                    "list"
+                    ? "grid"
+                    : "list"
+                )
+              }
+            >
+              {productsLayout ===
+              "list" ? (
+                <LayoutGrid size={16} />
+              ) : (
+                <Rows3 size={16} />
+              )}
+            </IconButton>
 
-        {/* ACTIONS */}
-        <div className="flex items-center gap-2">
-
-          {/* DARK MODE */}
-          <button
-            onClick={() =>
-              toggleDarkMode()
-            }
-            className={cn(
-              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
-              darkMode
-                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
-                : "bg-white border-zinc-200 hover:bg-zinc-100"
-            )}
-          >
-            {darkMode ? (
-              <Sun size={16} />
-            ) : (
-              <Moon size={16} />
-            )}
-          </button>
-
-          {/* CATEGORY LAYOUT */}
-          <button
-            onClick={() =>
-              setSidebarLayout(
-                sidebarLayout ===
-                  "vertical"
-                  ? "horizontal"
-                  : "vertical"
-              )
-            }
-            className={cn(
-              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
-              darkMode
-                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
-                : "bg-white border-zinc-200 hover:bg-zinc-100"
-            )}
-          >
-            <PanelLeft size={16} />
-          </button>
-
-          {/* PRODUCTS LAYOUT */}
-          <button
-            onClick={() =>
-              setProductsLayout(
-                productsLayout ===
-                  "list"
-                  ? "grid"
-                  : "list"
-              )
-            }
-            className={cn(
-              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
-              darkMode
-                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
-                : "bg-white border-zinc-200 hover:bg-zinc-100"
-            )}
-          >
-            {productsLayout ===
-            "list" ? (
-              <LayoutGrid size={16} />
-            ) : (
-              <Rows3 size={16} />
-            )}
-          </button>
-
-          {/* SHOW / HIDE PRICES */}
-          <button
-            onClick={() =>
-              setShowPrices(!showPrices)
-            }
-            className={cn(
-              "h-9 w-9 rounded-xl border flex items-center justify-center transition-all duration-200",
-              darkMode
-                ? "bg-zinc-800 border-zinc-700 hover:bg-zinc-700"
-                : "bg-white border-zinc-200 hover:bg-zinc-100"
-            )}
-          >
-            <BadgeDollarSign size={16} />
-          </button>
-
-        </div>
-      </div>
-
+            <IconButton
+              onClick={() =>
+                setShowPrices(
+                  !showPrices
+                )
+              }
+            >
+              <BadgeDollarSign size={16} />
+            </IconButton>
+          </>
+        }
+      />
+          
       {/* =====================================================
           CONTENT
       ===================================================== */}
@@ -290,18 +254,18 @@ export function MenuPanel({
                   ] || Beef;
 
                 return (
-                  <motion.button
-                    layout
-                    transition={{
-                      duration: 0.18,
-                      ease: "easeOut",
-                    }}
-                    key={cat.id}
+                <motion.div
+                  layout
+                  transition={{
+                    duration: 0.18,
+                    ease: "easeOut",
+                  }}
+                  key={cat.id}
+                >
+                  <InteractiveCard
+                    active={active}
                     onClick={() => {
 
-                      /**
-                       * MANUAL PRODUCT
-                       */
                       if (
                         cat.name ===
                         "Manual"
@@ -317,23 +281,18 @@ export function MenuPanel({
                       );
                     }}
                     className={cn(
-                      "group relative overflow-hidden transition-all duration-200",
-                      "border rounded-md",
-                      "flex items-center",
-                      "text-left p-2 gap-2",
-                      "min-h-[56px]",
+                      `
+                        flex
+                        items-center
+                        text-left
+                        p-2
+                        gap-2
+                        min-h-[56px]
+                      `,
 
                       sidebarLayout === "horizontal"
                         ? "justify-center w-full"
-                        : "justify-start w-full",
-
-                      active
-                        ? darkMode
-                          ? "bg-zinc-800 border-zinc-700 shadow-lg"
-                          : "bg-white border-primary shadow-md ring-1 ring-primary/10"
-                        : darkMode
-                        ? "bg-zinc-900 border-zinc-800 hover:bg-zinc-800"
-                        : "bg-white border-zinc-200 hover:border-zinc-300 hover:shadow-sm"
+                        : "justify-start w-full"
                     )}
                   >
 
@@ -360,15 +319,15 @@ export function MenuPanel({
                         className={cn(
                           "font-semibold leading-tight text-xs",
                           "break-words whitespace-normal",
-                          darkMode &&
-                            "text-white"
+                          "text-zinc-900 dark:text-white"
                         )}
                       >
                         {cat.name}
                       </span>
                     )}
 
-                  </motion.button>
+                  </InteractiveCard>
+                </motion.div>
                 );
               }
             )}
@@ -483,6 +442,10 @@ export function MenuPanel({
                             {/* PRODUCT */}
                             <button
                               onClick={() => {
+                                if (!selectedTable) {
+                                  triggerTableSelectionError();
+                                  return;
+                                }
 
                                 if (
                                   prod.variants
@@ -497,7 +460,7 @@ export function MenuPanel({
 
                                   return;
                                 }
-
+                                
                                 addToPending({
                                   ...prod,
                                   variant: null,

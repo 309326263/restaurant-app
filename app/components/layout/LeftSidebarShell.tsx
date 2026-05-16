@@ -17,13 +17,17 @@ import {
 type Props = {
   children: ReactNode;
 };
-
+import { theme } from "@/app/src/lib/ui/theme";
 export function LeftSidebarShell({ children }: Props) {
   const {
     sidebarCollapsed,
     navbarOpen,
     toggleSidebar,
     toggleNavbar,
+  } = useUiStore();
+
+  const {
+    tableSelectionError,
   } = useUiStore();
 
   return (
@@ -67,7 +71,21 @@ export function LeftSidebarShell({ children }: Props) {
       </div>
 
       {/* CONTENT */}
-      <div className="flex-1 min-h-0 relative">
+      <div
+  className={cn(
+    theme.surface.card,
+    theme.border.default,
+    "flex-1 min-h-0 relative",
+
+    tableSelectionError && [
+      "border-red-500/70",
+      "shadow-[0_0_0_1px_rgba(239,68,68,0.45)]",
+      "bg-red-500/5",
+      "transition-all duration-300",
+      "animate-[tableShake_420ms_ease]",
+    ]
+  )}
+>
 
         {/* TABLES SCROLL */}
         <div className="h-full overflow-y-auto p-2">

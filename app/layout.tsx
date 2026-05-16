@@ -2,6 +2,7 @@ import type { Metadata } from "next";
 import { Inter } from "next/font/google";
 import "./globals.css";
 import { cn } from "@/lib/utils";
+import { ThemeProvider } from "@/app/src/components/providers/ThemeProvider";
 
 const inter = Inter({
   subsets: ["latin"],
@@ -25,10 +26,12 @@ export default function RootLayout({
         "h-full antialiased font-sans",
         inter.variable
       )}
+      suppressHydrationWarning
     >
-      {/* IMPORTANTE: dark mode se maneja con class="dark" en el html */}
       <body className="min-h-full flex flex-col bg-background text-foreground">
-        {children}
+        <ThemeProvider>
+          {children}
+        </ThemeProvider>
       </body>
     </html>
   );

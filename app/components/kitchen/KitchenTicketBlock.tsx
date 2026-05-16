@@ -6,11 +6,21 @@ import type {
   KitchenItemAction,
   KitchenPendingAction,
 } from "@/app/types/kitchen";
+
+import { KitchenSurfaceCard } from "@/app/components/ui/kitchen/primitives";
+import { kitchenStatusColors } from "@/app/components/ui/kitchen/tokens";
+import { cn } from "@/lib/cn";
 import { KitchenItem } from "./KitchenItem";
+import { theme } from "@/app/src/lib/ui/theme";
 
 type KitchenTicketBlockProps = {
   ticket: KitchenGroupedTicket;
-  highlight: boolean;
+  tone:
+    | "new"
+    | "alert"
+    | "critical"
+    | "reservation"
+    | "reservationActive";
   pendingActions: KitchenPendingAction[];
   onUpdateItem: (
     itemId: number,
@@ -33,17 +43,44 @@ function formatTime(value: string | null) {
 export const KitchenTicketBlock = memo(
   function KitchenTicketBlock({
     ticket,
-    highlight,
+    tone,
     pendingActions,
     onUpdateItem,
   }: KitchenTicketBlockProps) {
     return (
-      <div
-        className={`kitchen-block ${
-          highlight ? "kitchen-block-new" : ""
-        }`}
+      <KitchenSurfaceCard
+        className={cn(
+          theme.surface.card,
+          theme.border.default,
+          theme.motion.fast,
+
+          `
+            space-y-2
+            border
+            p-2
+            rounded-2xl
+          `,
+
+          tone === "new" && kitchenStatusColors.new,
+          tone === "alert" && kitchenStatusColors.alert,
+          tone === "critical" && kitchenStatusColors.critical,
+          tone === "reservation" && kitchenStatusColors.reservation,
+          tone === "reservationActive" &&
+            kitchenStatusColors.reservationActive
+        )}
+        variant="surfaceAlt"
       >
-        <div className="kitchen-time">
+        <div
+          className={cn(
+            theme.text.secondary,
+            `
+              text-right
+              text-xs
+              font-bold
+              tabular-nums
+            `
+          )}
+        >
           {formatTime(ticket.sentAt)}
         </div>
 
@@ -51,13 +88,11 @@ export const KitchenTicketBlock = memo(
           <KitchenItem
             key={item.id}
             item={item}
-            isPending={pendingActions.includes(
-              `item:${item.id}`
-            )}
+            isPending={pendingActions.includes(`item:${item.id}`)}
             onUpdateItem={onUpdateItem}
           />
         ))}
-      </div>
+      </KitchenSurfaceCard>
     );
   }
 );

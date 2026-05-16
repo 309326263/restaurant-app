@@ -29,6 +29,9 @@ type UiStore = {
   // THEME
   darkMode: boolean;
 
+  // TABLE UI
+  tableSelectionError: boolean;
+
   // 🔥 POS ENGINE STATE
   newOrderTables: Record<
     number,
@@ -95,6 +98,9 @@ type UiStore = {
 
   toggleDarkMode: () => void;
 
+  // TABLE UI
+  triggerTableSelectionError: () => void;
+
   // 🔥 POS ACTIONS
   markTableHasOrder: (
     tableId: number
@@ -130,6 +136,9 @@ export const useUiStore =
 
     // THEME
     darkMode: false,
+
+    // TABLE UI
+    tableSelectionError: false,
 
     // POS ENGINE
     newOrderTables: {},
@@ -234,6 +243,22 @@ export const useUiStore =
       set((s) => ({
         darkMode: !s.darkMode,
       })),
+
+    // =========================
+    // TABLE UI
+    // =========================
+    triggerTableSelectionError:
+      () => {
+        set({
+          tableSelectionError: true,
+        });
+
+        setTimeout(() => {
+          set({
+            tableSelectionError: false,
+          });
+        }, 550);
+      },
 
     // =========================
     // POS ENGINE

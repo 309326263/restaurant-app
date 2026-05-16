@@ -15,7 +15,18 @@ import {
   Minus,
   Plus,
   ChevronDown,
+  CarTaxiFront,
+  FastForwardIcon,
 } from "lucide-react";
+import { SectionCard } from "@/app/src/components/ui/SectionCard";
+import { theme } from "@/app/src/lib/ui/theme";
+import { SectionHeader } from "@/app/src/components/ui/SectionHeader";
+import  { StatusIcon } from "@/app/src/components/ui/StatusIcon"
+import { SectionLabel } from "@/app/src/components/ui/SectionLabel";
+import { RowItem } from "@/app/src/components/ui/RowItem";
+import { PrimaryButton } from "@/app/src/components/ui/PrimaryButton";
+import { DangerButton } from "@/app/src/components/ui/DangerButton";
+import { QuantityControl } from "@/app/src/components/ui/QuantityControl";
 
 function formatTimeLabel(
   value: string | Date | null | undefined
@@ -408,44 +419,19 @@ export function CartPanel({
       );
     };
 
-  const deleteButtonClass =
-    cn(
-      "w-8 h-8 shrink-0 rounded-lg border",
-      "flex items-center justify-center",
-      "transition-all duration-200",
-
-      darkMode
-        ? `
-          bg-red-500/10
-          border-red-500/20
-          text-red-300
-          hover:bg-red-500/20
-        `
-        : `
-          bg-red-50
-          border-red-200
-          text-red-600
-          hover:bg-red-100
-        `
-    );
-
-  const continuousRowClass =
-    cn(
-      "flex items-center min-h-11 px-3",
-      "border-b last:border-b-0",
-
-      darkMode
-        ? "border-zinc-800 bg-zinc-950"
-        : "border-zinc-200 bg-zinc-50"
-    );
 
   return (
     <div
       className={cn(
-        "h-full flex flex-col overflow-hidden transition-colors duration-200",
-        darkMode
-          ? "bg-zinc-950 text-white"
-          : "bg-zinc-100 text-zinc-900"
+        `
+          h-full
+          flex
+          flex-col
+          overflow-hidden
+          transition-colors
+          duration-200
+        `,
+        theme.surface.page
       )}
     >
 
@@ -540,20 +526,12 @@ export function CartPanel({
         ===================================================== */}
         {pendingCart.length > 0 && (
 
-          <div
-            className={cn(
-              "rounded-2xl border overflow-hidden",
-              "transition-colors duration-200",
-
-              darkMode
-                ? "bg-zinc-900 border-zinc-800"
-                : "bg-white border-zinc-200"
-            )}
+          <SectionCard
           >
 
             <div
               className={cn(
-                "h-12 px-4 border-b",
+                "h-14 px-4 border-b",
                 "flex items-center justify-between",
 
                 darkMode
@@ -562,11 +540,19 @@ export function CartPanel({
               )}
             >
 
-              <div>
+              <div className="flex items-center gap-3">
 
-                <h3 className="text-sm font-semibold">
-                  Carrito pendiente
-                </h3>
+                  <StatusIcon variant="products">
+                    <FastForwardIcon size={18} />
+                  </StatusIcon>
+
+                  <div>
+
+                    <h3 className="text-sm font-semibold">
+                      Creando orden
+                    </h3>
+
+                    </div>
 
               </div>
 
@@ -589,50 +575,32 @@ export function CartPanel({
               {pendingCartKitchen.length >
                 0 && (
                 <>
-                  <div
-                    className={cn(
-                      "px-3 py-2 text-xs font-semibold border-b",
-
-                      darkMode
-                        ? "border-zinc-800 text-zinc-300"
-                        : "border-zinc-200 text-zinc-700"
-                    )}
-                  >
+                  <SectionLabel>
                     Cocina
-                  </div>
+                  </SectionLabel>
 
                   {pendingCartKitchen.map(
                     (p: any) => (
-                      <div
+                      <RowItem
                         key={`${p.id}-${p.displayName}`}
-                        className={
-                          continuousRowClass
-                        }
                       >
 
-                        <button
-                          type="button"
+                        <DangerButton
                           onClick={() =>
                             onRemovePending(
                               p.id,
                               p.displayName
                             )
                           }
-                          className={
-                            deleteButtonClass
-                          }
                         >
                           <Trash2 size={14} />
-                        </button>
+                        </DangerButton>
 
                         <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
                           {p.displayName || "Item"}
                         </div>
 
-                        <PendingQuantityCluster
-                          darkMode={
-                            darkMode
-                          }
+                        <QuantityControl
                           quantity={p.quantity}
                           onDecrease={() =>
                             onDecreasePending(
@@ -648,7 +616,7 @@ export function CartPanel({
                           }
                         />
 
-                      </div>
+                      </RowItem>
                     )
                   )}
                 </>
@@ -657,50 +625,32 @@ export function CartPanel({
               {pendingCartBar.length >
                 0 && (
                 <>
-                  <div
-                    className={cn(
-                      "px-3 py-2 text-xs font-semibold border-b",
-
-                      darkMode
-                        ? "border-zinc-800 text-zinc-300"
-                        : "border-zinc-200 text-zinc-700"
-                    )}
-                  >
+                  <SectionLabel>
                     Bebidas
-                  </div>
+                  </SectionLabel>
 
                   {pendingCartBar.map(
                     (p: any) => (
-                      <div
+                      <RowItem
                         key={`bar-p-${p.id}-${p.displayName}`}
-                        className={
-                          continuousRowClass
-                        }
                       >
 
-                        <button
-                          type="button"
+                        <DangerButton
                           onClick={() =>
                             onRemovePending(
                               p.id,
                               p.displayName
                             )
                           }
-                          className={
-                            deleteButtonClass
-                          }
                         >
                           <Trash2 size={14} />
-                        </button>
+                        </DangerButton>
 
                         <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
                           {p.displayName || "Item"}
                         </div>
 
-                        <PendingQuantityCluster
-                          darkMode={
-                            darkMode
-                          }
+                        <QuantityControl
                           quantity={p.quantity}
                           onDecrease={() =>
                             onDecreasePending(
@@ -716,7 +666,7 @@ export function CartPanel({
                           }
                         />
 
-                      </div>
+                      </RowItem>
                     )
                   )}
                 </>
@@ -732,38 +682,22 @@ export function CartPanel({
                 )}
               >
 
-                <button
+                <PrimaryButton
+                  className="w-full"
                   onClick={async () => {
                     await onConfirmAddToOrder();
 
                     onOpenSendModal();
                   }}
-                  className={cn(
-                    "w-full h-12 rounded-2xl",
-                    "font-semibold text-sm",
-                    "transition-all duration-200",
-
-                    darkMode
-                      ? `
-                        bg-violet-500
-                        hover:bg-violet-400
-                        text-white
-                      `
-                      : `
-                        bg-violet-600
-                        hover:bg-violet-500
-                        text-white
-                      `
-                  )}
                 >
                   Agregar a orden
-                </button>
+                </PrimaryButton>
 
               </div>
 
             </div>
 
-          </div>
+          </SectionCard>
         )}
 
         {/* =====================================================
@@ -777,15 +711,7 @@ export function CartPanel({
               i.status ===
               "PENDING"
           ) && (
-            <div
-              className={cn(
-                "rounded-2xl border overflow-hidden",
-
-                darkMode
-                  ? "bg-zinc-900 border-zinc-800"
-                  : "bg-white border-zinc-200"
-              )}
-            >
+            <SectionCard>
 
               <div
                 className={cn(
@@ -800,18 +726,9 @@ export function CartPanel({
 
                 <div className="flex items-center gap-3">
 
-                  <div
-                    className={cn(
-                      "w-10 h-10 rounded-2xl",
-                      "flex items-center justify-center",
-
-                      darkMode
-                        ? "bg-amber-500/15 text-amber-300"
-                        : "bg-amber-100 text-amber-700"
-                    )}
-                  >
+                  <StatusIcon variant="kitchen">
                     <Clock3 size={18} />
-                  </div>
+                  </StatusIcon>
 
                   <div>
 
@@ -835,29 +752,14 @@ export function CartPanel({
 
                 </div>
 
-                <button
+                <PrimaryButton
+                  className="h-9 px-4 rounded-xl text-xs"
                   onClick={
                     onOpenSendModal
                   }
-                  className={cn(
-                    "h-9 px-4 rounded-xl",
-                    "text-xs font-semibold transition-all duration-200",
-
-                    darkMode
-                      ? `
-                        bg-violet-500
-                        hover:bg-violet-400
-                        text-white
-                      `
-                      : `
-                        bg-violet-600
-                        hover:bg-violet-500
-                        text-white
-                      `
-                  )}
                 >
                   Confirmar
-                </button>
+                </PrimaryButton>
 
               </div>
 
@@ -866,53 +768,32 @@ export function CartPanel({
                 {pendingKitchenItems.length >
                   0 && (
                   <>
-                    <div
-                      className={cn(
-                        "px-3 py-2 text-xs font-semibold border-b",
-
-                        darkMode
-                          ? "border-zinc-800 text-zinc-300"
-                          : "border-zinc-200 text-zinc-700"
-                      )}
-                    >
+                    <SectionLabel>
                       Cocina
-                    </div>
+                    </SectionLabel>
 
                     {pendingKitchenItems.map(
                       (i: any) => (
-                        <div
+                        <RowItem
                           key={i.id}
-                          className={
-                            continuousRowClass
-                          }
                         >
 
-                          <button
-                            type="button"
+                          <DangerButton
                             onClick={() =>
                               deleteOrderItem(
-                                Number(
-                                  i.id
-                                )
+                                Number(i.id)
                               )
                             }
-                            className={
-                              deleteButtonClass
-                            }
                           >
-                            <Trash2
-                              size={14}
-                            />
-                          </button>
+                            <Trash2 size={14} />
+                          </DangerButton>
 
                           <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
                             {i.displayName || "Item"}
                           </div>
 
-                          <PendingQuantityCluster
-                            darkMode={
-                              darkMode
-                            }
+                          <QuantityControl
+                            
                             quantity={Number(
                               i.quantity
                             )}
@@ -936,7 +817,7 @@ export function CartPanel({
                             }
                           />
 
-                        </div>
+                        </RowItem>
                       )
                     )}
                   </>
@@ -945,53 +826,32 @@ export function CartPanel({
                 {pendingBarItems.length >
                   0 && (
                   <>
-                    <div
-                      className={cn(
-                        "px-3 py-2 text-xs font-semibold border-b",
-
-                        darkMode
-                          ? "border-zinc-800 text-zinc-300"
-                          : "border-zinc-200 text-zinc-700"
-                      )}
-                    >
+                    <SectionLabel>
                       Bebidas
-                    </div>
+                    </SectionLabel>
 
                     {pendingBarItems.map(
                       (i: any) => (
-                        <div
+                        <RowItem
                           key={i.id}
-                          className={
-                            continuousRowClass
-                          }
                         >
 
-                          <button
-                            type="button"
+                          <DangerButton
                             onClick={() =>
                               deleteOrderItem(
-                                Number(
-                                  i.id
-                                )
+                                Number(i.id)
                               )
                             }
-                            className={
-                              deleteButtonClass
-                            }
                           >
-                            <Trash2
-                              size={14}
-                            />
-                          </button>
+                            <Trash2 size={14} />
+                          </DangerButton>
 
                           <div className="flex-1 min-w-0 px-2 text-sm font-semibold truncate">
                             {i.displayName || "Item"}
                           </div>
 
-                          <PendingQuantityCluster
-                            darkMode={
-                              darkMode
-                            }
+                          <QuantityControl
+                            
                             quantity={Number(
                               i.quantity
                             )}
@@ -1015,7 +875,7 @@ export function CartPanel({
                             }
                           />
 
-                        </div>
+                        </RowItem>
                       )
                     )}
                   </>
@@ -1023,67 +883,23 @@ export function CartPanel({
 
               </div>
 
-            </div>
+            </SectionCard>
           )}
 
           {/* KITCHEN */}
           {kitchenSentItems.length >
             0 && (
-            <div
-              className={cn(
-                "rounded-2xl border overflow-hidden",
+            <SectionCard>
 
-                darkMode
-                  ? "bg-zinc-900 border-zinc-800"
-                  : "bg-white border-zinc-200"
-              )}
-            >
-
-              <div
-                className={cn(
-                  "h-14 px-4 border-b",
-                  "flex items-center gap-3",
-
-                  darkMode
-                    ? "border-zinc-800"
-                    : "border-zinc-200"
-                )}
-              >
-
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-2xl",
-                    "flex items-center justify-center",
-
-                    darkMode
-                      ? "bg-orange-500/15 text-orange-300"
-                      : "bg-orange-100 text-orange-700"
-                  )}
-                >
-                  <ChefHat size={18} />
-                </div>
-
-                <div>
-
-                  <h3 className="text-sm font-semibold">
-                    En cocina
-                  </h3>
-
-                  <p
-                    className={cn(
-                      "text-[11px]",
-
-                      darkMode
-                        ? "text-zinc-400"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Preparando alimentos
-                  </p>
-
-                </div>
-
-              </div>
+              <SectionHeader
+                title="En cocina"
+                description="Preparando alimentos"
+                icon={
+                  <StatusIcon variant="kitchen">
+                    <ChefHat size={18} />
+                  </StatusIcon>
+                }
+              />
 
               <div className="p-3 space-y-3">
 
@@ -1170,15 +986,8 @@ export function CartPanel({
                             (
                               i: any
                             ) => (
-                              <div
+                              <RowItem
                                 key={i.id}
-                                className={cn(
-                                  continuousRowClass,
-
-                                  darkMode
-                                    ? "bg-zinc-950"
-                                    : "bg-zinc-50"
-                                )}
                               >
 
                                 <div className="flex-1 min-w-0 px-1 text-sm font-medium truncate">
@@ -1202,7 +1011,7 @@ export function CartPanel({
                                   }
                                 </span>
 
-                              </div>
+                              </RowItem>
                             )
                           )}
 
@@ -1215,67 +1024,24 @@ export function CartPanel({
 
               </div>
 
-            </div>
+            </SectionCard>
           )}
 
           {/* BAR */}
           {barSentItems.length >
             0 && (
-            <div
-              className={cn(
-                "rounded-2xl border overflow-hidden",
+            <SectionCard>
 
-                darkMode
-                  ? "bg-zinc-900 border-zinc-800"
-                  : "bg-white border-zinc-200"
-              )}
-            >
-
-              <div
-                className={cn(
-                  "h-14 px-4 border-b",
-                  "flex items-center gap-3",
-
-                  darkMode
-                    ? "border-zinc-800"
-                    : "border-zinc-200"
-                )}
-              >
-
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-2xl",
-                    "flex items-center justify-center",
-
-                    darkMode
-                      ? "bg-cyan-500/15 text-cyan-300"
-                      : "bg-cyan-100 text-cyan-700"
-                  )}
-                >
+             <SectionHeader
+              title="En bar"
+              description="Preparando bebidas"
+             
+              icon={
+                <StatusIcon variant="bar">
                   <Martini size={18} />
-                </div>
-
-                <div>
-
-                  <h3 className="text-sm font-semibold">
-                    En bar
-                  </h3>
-
-                  <p
-                    className={cn(
-                      "text-[11px]",
-
-                      darkMode
-                        ? "text-zinc-400"
-                        : "text-muted-foreground"
-                    )}
-                  >
-                    Preparando bebidas
-                  </p>
-
-                </div>
-
-              </div>
+                </StatusIcon>
+              }
+            />
 
               <div className="p-3 space-y-3">
 
@@ -1362,21 +1128,13 @@ export function CartPanel({
                             (
                               i: any
                             ) => (
-                              <div
+                              <RowItem
                                 key={i.id}
                                 className={cn(
-                                  continuousRowClass,
-
                                   recentItems.includes(
-                                    Number(
-                                      i.id
-                                    )
+                                    Number(i.id)
                                   ) &&
-                                    "ring-2 ring-inset ring-cyan-500/40",
-
-                                  darkMode
-                                    ? "bg-zinc-950"
-                                    : "bg-zinc-50"
+                                    "ring-2 ring-inset ring-cyan-500/40"
                                 )}
                               >
 
@@ -1401,7 +1159,7 @@ export function CartPanel({
                                   }
                                 </span>
 
-                              </div>
+                              </RowItem>
                             )
                           )}
 
@@ -1414,7 +1172,7 @@ export function CartPanel({
 
               </div>
 
-            </div>
+            </SectionCard>
           )}
 
           {/* DONE */}
@@ -1422,15 +1180,7 @@ export function CartPanel({
             (i: any) =>
               i.status === "DONE"
           ) && (
-            <div
-              className={cn(
-                "rounded-2xl border overflow-hidden",
-
-                darkMode
-                  ? "bg-zinc-900 border-zinc-800"
-                  : "bg-white border-zinc-200"
-              )}
-            >
+            <SectionCard>
 
               <div
                 className={cn(
@@ -1443,20 +1193,9 @@ export function CartPanel({
                 )}
               >
 
-                <div
-                  className={cn(
-                    "w-10 h-10 rounded-2xl",
-                    "flex items-center justify-center",
-
-                    darkMode
-                      ? "bg-emerald-500/15 text-emerald-300"
-                      : "bg-emerald-100 text-emerald-700"
-                  )}
-                >
-                  <CheckCircle2
-                    size={18}
-                  />
-                </div>
+                <StatusIcon variant="success">
+                  <CheckCircle2 size={18} />
+                </StatusIcon>
 
                 <div>
 
@@ -1528,7 +1267,7 @@ export function CartPanel({
 
               </div>
 
-            </div>
+            </SectionCard>
           )}
 
         </div>
